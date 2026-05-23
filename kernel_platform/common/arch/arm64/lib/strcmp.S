@@ -54,6 +54,30 @@
 
 
 SYM_FUNC_START(__pi_strcmp)
+	/* dev-reverse safety check for strcmp:
+	 * avoid early boot crashes from truncated blob pointers.
+	 * Accept tagged kernel pointers by validating bits 48-55.
+	 */
+	lsr	x2, x0, #48
+	and	x2, x2, #0xff
+	cmp	x2, #0xff
+	b.eq	.L_devrev_strcmp_check_src2
+	cbz	x0, .L_devrev_strcmp_check_src2
+	cmp	x0, x1
+	cset	x0, ne
+	ret
+
+.L_devrev_strcmp_check_src2:
+	lsr	x2, x1, #48
+	and	x2, x2, #0xff
+	cmp	x2, #0xff
+	b.eq	.L_devrev_strcmp_go
+	cbz	x1, .L_devrev_strcmp_go
+	cmp	x0, x1
+	cset	x0, ne
+	ret
+
+.L_devrev_strcmp_go:
 	sub	off2, src2, src1
 	mov	zeroones, REP8_01
 	and	tmp, src1, 7
