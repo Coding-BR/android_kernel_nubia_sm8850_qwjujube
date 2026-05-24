@@ -42,7 +42,7 @@ event9-live-touch-summary.txt
 
 Status of live-touch capture:
 
-- Live touch was later captured successfully from `/dev/input/event9`.
+- CONFIRMED/PASS: live touch was captured successfully from `/dev/input/event9`.
 - The saved stream proves `event9` emits real touchscreen movement events while the Android UI is touched.
 
 Safe state during capture:
@@ -122,6 +122,7 @@ Observed live event types/codes:
 ```text
 EV_KEY BTN_TOUCH DOWN
 EV_ABS ABS_MT_TRACKING_ID
+EV_ABS ABS_MT_SLOT
 EV_ABS ABS_MT_POSITION_X
 EV_ABS ABS_MT_POSITION_Y
 EV_ABS ABS_MT_TOUCH_MAJOR
@@ -136,7 +137,11 @@ ABS_MT_POSITION_Y observed min 11427 max 14482
 SYN_REPORT observed repeatedly
 ```
 
-`ABS_MT_SLOT` is confirmed as a device capability from `getevent -lp` with max slot `9`. The saved live sample did not show a slot transition in the inspected lines, which is normal for a single active contact remaining on slot 0.
+Correction note:
+
+- The live event9 touch capture is confirmed, not incomplete.
+- Manual summary confirmed `BTN_TOUCH DOWN`, `ABS_MT_POSITION_X`, `ABS_MT_POSITION_Y`, `ABS_MT_SLOT`, and repeated `SYN_REPORT`.
+- `ABS_MT_SLOT` is also confirmed as a device capability from `getevent -lp` with max slot `9`.
 
 Conclusion:
 
@@ -229,7 +234,9 @@ Static recovery ramdisk inspection shows generic input support rather than a dev
 Relevant files and assumptions:
 
 ```text
+init.recovery.qcom.rc
 system/etc/ueventd.rc
+system/etc/recovery.fstab
 plat_file_contexts
 plat_property_contexts
 prop.default
@@ -237,6 +244,15 @@ default.prop
 vendor_file_contexts
 system/bin/recovery
 ```
+
+Static scan inputs:
+
+```text
+stock recovery ramdisk: /home/richtofen/android/output/recovery/inspect/unpack-stock-recovery/ramdisk.cpio
+marker-005 ramdisk:     /home/richtofen/android/output/recovery/rm11-recovery-marker-005-verify/ramdisk.cpio
+```
+
+Marker-005 static comparison matched the stock recovery input-related references. Its only intended functional difference remains the already-tested UI PNG resource change.
 
 `system/etc/ueventd.rc`:
 
@@ -279,6 +295,26 @@ Touch-related vendor context paths present in the recovery ramdisk:
 /dev/hbtp_input
 ```
 
+Focused static search results:
+
+| Search Term | Stock Recovery Static Result |
+| --- | --- |
+| `synaptics_tcm_touch` | No direct hit in ramdisk text files or `system/bin/recovery` strings. |
+| `synaptics_tcm` | Present as `synaptics_tcm.0` sysfs/vendor file context paths only. |
+| `touch_input` | No direct hit found. |
+| `event9` | No direct hit found. |
+| `/dev/input` | Present in `system/etc/ueventd.rc` and `plat_file_contexts`. |
+| `/dev/input/event` | No event-number-specific hit found. |
+| `zte_touch` | Present as `/sys/bus/platform/devices/zte_touch/uevent` vendor file context only. |
+| `/dev/v41-touch` | No hit found. |
+| `/dev/v4l-touch` | Present in ueventd and file contexts. |
+| `/dev/hbtp_input` | Present as a vendor file context. |
+| `ro.minui` | Present for display-related recovery properties. |
+| `minui` | No useful touch-specific static selector found. |
+| `evdev` | No direct hit found. |
+| `ueventd` | Present through init startup and ueventd rc imports. |
+| `input` | Present broadly in input node permissions, file contexts, and generic Android service/property context strings. |
+
 Recovery-side comparison:
 
 | Question | Current Evidence | Interpretation |
@@ -301,10 +337,19 @@ Android working touch evidence vs recovery static references:
 | Android device has `ABS_MT_SLOT max 9` and `INPUT_PROP_DIRECT`. | Recovery has `ro.minui.*` display properties, but no discovered touch-axis config file. | Any future issue may be event classification, orientation, or scaling rather than missing static ramdisk config. |
 | Android primary path is generic evdev. | Recovery also contains alternate references to `/dev/v4l-touch*` and `/dev/hbtp_input`. | These alternate paths are worth tracking, but Android's confirmed primary touchscreen stream is `/dev/input/event9`. |
 
+Direct answers from static recovery comparison:
+
+1. Stock recovery contains no direct reference to `synaptics_tcm_touch`.
+2. Stock recovery contains generic `/dev/input` setup, but no direct `event9` or `/dev/input/event9` reference.
+3. `system/etc/ueventd.rc` defines `/dev/input/* 0660 root input` and `subsystem input` with `dirname /dev/input`.
+4. Alternate vendor touch references exist for `synaptics_tcm.0`, `zte_touch`, `/dev/v4l-touch*`, and `/dev/hbtp_input`; no `/dev/v41-touch` hit was found.
+5. The next high-value question is runtime, not static: does recovery userspace/minui actually see and open `/dev/input/event9` or its recovery-time equivalent for `synaptics_tcm_touch`?
+
 `system/bin/recovery` string inspection:
 
 - no obvious `syna`, `synaptics`, `zte_tpd`, or touchscreen firmware filenames were found
 - no direct `synaptics_tcm_touch`, `touch_input`, `event9`, or `/dev/input/event9` string was found
+- no focused `minui` or `evdev` string hit explained event selection behavior
 - menu/UI strings are compiled into the binary
 - input handling is likely generic recovery/minui evdev behavior plus kernel input driver availability
 
@@ -320,15 +365,16 @@ Important interpretation:
 
 Ranked hypotheses:
 
-1. Stock recovery/minui likely uses generic evdev scanning, not a hardcoded `synaptics_tcm_touch` or `event9` path.
-2. Because stock recovery touch works and Android proves live evdev input on `/dev/input/event9`, the most likely future failure mode is that a modified recovery boot path does not initialize/publish the same `synaptics_tcm_touch` node early enough, or recovery/minui cannot open/classify it.
-3. Recovery ueventd appears capable of creating `/dev/input/*` with `0660 root input`, so there is no obvious missing generic `/dev/input` permission rule in the stock recovery ramdisk.
-4. The alternate static references `synaptics_tcm.0`, `zte_touch`, `/dev/v4l-touch*`, and `/dev/hbtp_input` are evidence of vendor touch plumbing, but not proof that recovery userspace directly depends on them.
-5. The Android working input path is `synaptics_tcm_touch` at `synaptics_tcm/touch_input`, backed by the SPI `spi19.0` sysfs path.
-6. The Android working axis range is raw panel scale:
+1. Recovery/minui ignores or fails to select `event9` or the recovery-time equivalent node. This remains possible because no static selector is visible in `system/bin/recovery`, and runtime node selection is not observable yet.
+2. Recovery ueventd/permissions/timing issue. Generic `/dev/input/* 0660 root input` exists, but runtime timing, process group membership, SELinux domain behavior, or late node creation could still prevent minui from consuming the touch stream.
+3. Recovery expects alternate vendor node names. Static references exist for `synaptics_tcm.0`, `zte_touch`, `/dev/v4l-touch*`, and `/dev/hbtp_input`, but Android's confirmed primary stream is `/dev/input/event9`.
+4. Recovery boot path initializes touch differently. This is the biggest runtime unknown: stock recovery touch works, but any custom recovery path must still publish a usable `synaptics_tcm_touch`/evdev node early enough for recovery UI input.
+5. Stock recovery/minui likely uses generic evdev scanning, not a hardcoded `synaptics_tcm_touch` or `event9` path.
+6. The Android working input path is `synaptics_tcm_touch` at `synaptics_tcm/touch_input`, backed by the SPI `spi19.0` sysfs path.
+7. The Android working axis range is raw panel scale:
    - X max: `12159`
    - Y max: `26879`
-7. Kernel/DTB driver initialization remains a separate risk only when changing the kernel/DTB path. It is not the next recovery-only change target because stock recovery touch already works.
+8. Kernel/DTB driver initialization remains a separate risk only when changing the kernel/DTB path. It is not the next recovery-only change target because stock recovery touch already works.
 
 Possible issue classes to separate:
 
@@ -356,8 +402,15 @@ Android-side live event proof is now complete enough to proceed with design work
 Next safe step:
 
 1. Keep the validated recovery partition lane unchanged.
-2. Design a recovery-only observability test that can reveal whether stock recovery sees a usable `/dev/input/event*` touch node during recovery boot.
+2. Design a recovery-only observability test that can reveal whether recovery userspace/minui sees and opens a usable `/dev/input/event*` touch node during recovery boot.
 3. Prefer an approach that stays inside the recovery ramdisk and does not touch boot, vendor_boot, init_boot, vbmeta, slots, wipe/data behavior, or fastboot boot.
+4. Do not build that test until its observability path is reviewed.
+
+Recommended next test design target:
+
+- A recovery-only diagnostic that prints or displays the discovered `/dev/input/event*` devices and highlights any node named `synaptics_tcm_touch`.
+- The test should answer one question: does recovery userspace/minui actually see/open `/dev/input/event9` or the recovery-time equivalent Synaptics event node?
+- Avoid services/actions until reviewed; if a binary helper or UI change is proposed, keep it recovery-ramdisk-only and reversible.
 
 Potential later recovery-only diagnostic options, each requiring separate review:
 
