@@ -37,13 +37,15 @@ Após uma verificação completa e tentativa de compilação da árvore do kerne
 | Cabeçalhos reconstruídos (RE) | **10** |
 | Drivers reconstruídos (RE) | **11** (mmrm-driver, synx-kernel, zte_imem_info, zte_misc, zte_stats_info, zte_reboot_ext, zte_sensor_sensitivity, zte_ir, zte_fingerprint, zte_led, zte_charger_policy) |
 | Auditoria Fase 2 completa | **audio-kernel, zte-drivers** (Paridade total para 9 drivers ZTE) |
+| Touchscreen `zte_tpd` | **Compila built-in; aguardando teste físico em recovery** |
+| Recovery temporário | **Imagem fastboot pronta; não flashar ainda** |
 
 ### Trabalho Pendente
 1. **[CONCLUÍDO] Compilar `bt-kernel`** — Source presente (Makefile + Kbuild). Gera `btpower.ko`, `btfmcodec.ko`, `bt_fm_swr.ko` e outros 4 módulos.
-2. **Compilar `touch-drivers`** — Source presente (goodix, focaltech). Gera driver de toque.
+2. **Validar `zte_tpd` em recovery temporário** — O NX809J usa o caminho ZTE/Synaptics reconstruído em `kernel_platform/common/drivers/soc/qcom/zte/zte_tpd/`, não os drivers genéricos `goodix`/`focaltech` como primeira hipótese. A imagem de teste já está pronta para `fastboot boot`.
 3. **Compilar `dataipa`** — Source parcial em `drivers/`. Gera módulos de rede IPA.
 4. **Compilação do kernel principal** — ~194 módulos de plataforma Qcom dependem do `canoe.fragment` (ausente). Solicitado à ZTE via `zte_missing_files_report.md`.
-5. **Engenharia reversa dos 11 módulos ZTE** — Proprietários sem source (**zte_tpd**, **zte_led**, **zte_power_supply** e **zte_charger_policy** concluídos).
+5. **Engenharia reversa dos módulos ZTE** — Vários drivers proprietários já foram reconstruídos; `zte_tpd` teve o setup de `struct input_dev` corrigido e compilado, mas ainda precisa de validação física antes de ser considerado concluído para custom recovery.
 6. **WLAN** — Código completamente ausente. Solicitado à ZTE.
 7. **GPU Overclock 1200MHz** — Análise e modificação dos Device Trees para clocks da GPU.
 8. **KernelSU-Next** — Integração e remoção de travas proprietárias.
@@ -151,10 +153,45 @@ Após uma verificação completa e tentativa de compilação da árvore do kerne
 * **Ação:** Reconstrução completa do driver sob `vendor/qcom/opensource/zte-drivers/zte_charger_policy/`. Implementado o módulo `zte_cleanup.ko` para neutralizar o driver built-in em tempo de execução limpando os callbacks do `node_ops_list` via KASLR e desvinculando-o do platform device `soc:charger_policy_service`. Refatorada a chamada interna dos handlers da máquina de estados (antes indireta via vetor de ponteiros `.handler`) para um `switch` direto, neutralizando qualquer vulnerabilidade à verificação de hashes do KCFI em tempo de execução.
 * **Impacto:** Restaura com 100% de estabilidade o gerenciamento de carga, limites de temperatura, proteção contra sobrecarga da ZTE e as interações com o `zte_misc` sem riscos de Kernel Panics.
 
-### ZTE Touch Panel Driver (zte_tpd.ko) - [RESOLVIDO, COMPILADO e AUDITADO]
-* **Ação:** Reconstrução completa do driver sob `vendor/zte/zte_tpd/` baseada em ~919 arquivos C descompilados. Mapeamento das estruturas do protocolo Synaptics TCM, do barramento SPI (`synaptics_tcm_spi`), da injeção e manipulação de coordenadas de toque via subsistema de input do kernel, e da integração com o display Qualcomm (`panel_event_notifier`) e o sensor de impressão digital sob a tela (`zte_fingerprint`). Desenvolvido o script `patch_tpd.py` para extração de CRCs e hashes KCFI oficiais.
-* **Auditoria de Carga:** Identificado via verificação de assinatura de GNU Build-ID que o carregamento dinâmico por bind-mount no estágio `post-fs-data` é tardio (o kernel já iniciou os drivers oficiais na RAM durante o early-init do bootloader/init). Criado o guia global [DEPLOYMENT_AND_VERIFICATION_GUIDE.md](file:///home/adrianojr59/Vídeos/NX809J_Android16_kernel/DEPLOYMENT_AND_VERIFICATION_GUIDE.md) detalhando o protocolo de teste via fastboot de kernel embutido (built-in `obj-y`) para testar drivers diretamente na RAM sem risco de brick.
-* **Impacto:** Restaura o suporte ao touchscreen físico, gestos fora da tela (off-screen gestures), comunicação SPI com o controlador Synaptics TCM e sincronização com o leitor de digitais sob a tela em GKI Kernel 6.12.
+### ZTE Touch Panel Driver (zte_tpd.ko) - [COMPILADO; VALIDAÇÃO FÍSICA PENDENTE]
+* **Ação:** Reconstrução do driver sob `kernel_platform/common/drivers/soc/qcom/zte/zte_tpd/` baseada nos arquivos C descompilados. Mapeamento das estruturas do protocolo Synaptics TCM, do barramento SPI (`synaptics_tcm_spi`), da injeção e manipulação de coordenadas de toque via subsistema de input do kernel, e da integração com o display Qualcomm (`panel_event_notifier`) e o sensor de impressão digital sob a tela (`zte_fingerprint`).
+* **Correção crítica aplicada:** O arquivo `syna_dev_set_up_input_device.c` ainda continha padrões de C descompilado que escreviam em offsets crus de `struct input_dev` (`device + 656`, `device + 712` e bitmaps em offsets fixos). Esses writes foram substituídos por campos nomeados e helpers oficiais do input subsystem (`input_set_drvdata`, `input_set_abs_params`, `input_mt_init_slots`, `__set_bit`).
+* **Branch de trabalho:** `codex/zte-tpd-input-device-refactor`
+* **Commit de referência:** `ed8d40445d3ad748b0401221fb452ad335e14761`
+* **Build:** `./super_build.sh` e `./repack_perfect_sign.sh` concluíram com sucesso.
+* **Auditoria de Carga:** Identificado via verificação de assinatura de GNU Build-ID que o carregamento dinâmico por bind-mount no estágio `post-fs-data` é tardio (o kernel já iniciou os drivers oficiais na RAM durante o early-init do bootloader/init). Criado o guia global `DEPLOYMENT_AND_VERIFICATION_GUIDE.md` detalhando o protocolo de teste via fastboot de kernel embutido (built-in `obj-y`) para testar drivers diretamente na RAM sem risco de brick.
+* **Estado real:** O driver compila e a corrupção óbvia de `input_dev` foi corrigida, mas o suporte ao touchscreen físico em recovery ainda precisa ser provado no aparelho. Não marcar como “resolvido” até passar no teste temporário abaixo.
+
+#### Gate atual: Recovery temporário para validar touch
+
+Imagem recomendada:
+
+```text
+/home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img
+SHA-256: da0cc68e4d814927d8232dadafd27a4c0741b8e547f2f457e1325113cf15788f
+```
+
+Base ROM usada:
+
+```text
+/mnt/e/Android/RM-11-Pro/BOOT/02-UL-Rom-16/images
+```
+
+Comando:
+
+```bash
+fastboot boot /home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img
+```
+
+Critérios:
+
+| Resultado | Próxima ação |
+| :--- | :--- |
+| Recovery inicia e touch funciona | Começar adaptação da ramdisk de custom recovery usando este kernel como base |
+| Recovery inicia sem touch | Coletar logs e continuar reparo de `zte_tpd` |
+| CrashDump/reboot | Bootar stock e coletar `scratch/ramoops.log` |
+
+Regra: usar apenas `fastboot boot`. Não usar `fastboot flash` nesta fase.
 
 ### Resolução de Conflitos de Símbolos Duplicados no Kernel (Fases 1 a 13) - [EM PROGRESSO]
 * **Ação:** Desativação seletiva de stubs redundantes e duplicados em `zte_parity.c` para resolver erros de carregamento dinâmico (`Exec format error` / `exports duplicate symbol`) de módulos proprietários essenciais na partição ramdisk.
@@ -171,6 +208,4 @@ Após uma verificação completa e tentativa de compilação da árvore do kerne
   - **Fase 12:** Símbolos AltMode (`altmode_*`) para o driver `altmode_glink.ko`.
   - **Fase 13:** Símbolos Synx (`synx_*`) para o driver `synx_driver.ko`.
 * **Impacto:** Permite que os drivers dinâmicos Qualcomm essenciais carreguem com sucesso do ramdisk no boot inicial.
-
-
 

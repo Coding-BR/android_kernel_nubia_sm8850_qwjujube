@@ -1,0 +1,1344 @@
+# RM11 Pro Recovery Partition Test Plan
+
+Device: RedMagic 11 Pro / NX809J / canoe
+
+Date: 2026-05-24
+
+Purpose: define the safest controlled path for validating recovery partition writes after proving that `fastboot boot` does not reproduce recovery-mode routing on this device.
+
+---
+
+## Current Project Synopsis
+
+The RM11 Pro / NX809J now has a validated recovery-partition development loop.
+
+Verified results:
+
+- ABL unlock/restoration enabled working fastboot commands.
+- `fastboot boot` is not a valid recovery-mode validation path on this device.
+- Stock recovery boots through `adb reboot recovery`.
+- Stock recovery display and touch work.
+- Recovery ADB remains unauthorized, matching stock recovery behavior.
+- `recovery_a` and `recovery_b` can be flashed safely.
+- Byte-identical repacked stock recovery flashed to both recovery slots and still booted Android/recovery.
+- marker-001 and marker-002 static ramdisk modifications passed.
+- marker-003 visibly proved recovery loads modified ramdisk resources, but the title fit was imperfect.
+- marker-004 displayed `Recovery 004` cleanly and passed physically.
+
+Current conclusion:
+
+- recovery partition workflow is validated
+- modified recovery ramdisk resources execute on-device
+- do not use `fastboot boot` for recovery validation
+- current safe lane is `recovery_a` / `recovery_b` only
+- rollback image remains `C:\RM11-test\recovery\rm11-repacked-stock-recovery.img`
+
+Hard restrictions:
+
+- no `fastboot boot` recovery tests
+- no force-recovery cmdline images
+- no `boot`, `vendor_boot`, `init_boot`, or `vbmeta` work
+- no wipe/data behavior changes
+- no services/init actions unless separately reviewed
+
+---
+
+## Current Model
+
+- `fastboot boot` is available after the ABL unlock/restoration work.
+- `fastboot boot` is not a valid recovery-mode test path on RM11 Pro.
+- `fastboot boot` routes Android even with stock kernel + stock DTB + stock recovery ramdisk.
+- Stock recovery boots correctly through `adb reboot recovery`.
+- Stock recovery display and touch both work.
+- `recovery.img` is ramdisk-only:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20458914]
+RAMDISK_FMT     [lz4_legacy]
+```
+
+- The repacked stock recovery baseline is byte-identical to the E: ROM stock `recovery.img`, so recovery unpack/repack tooling is clean.
+
+---
+
+## Current Safe State
+
+Last verified from Android/ADB:
+
+```text
+adb devices -l                         -> 912607710184 device product:NX809J-UN model:NX809J device:NX809J
+adb shell getprop ro.boot.slot_suffix  -> _a
+adb shell getprop sys.boot_completed   -> 1
+adb shell getprop ro.boot.verifiedbootstate -> orange
+adb shell getprop ro.boot.flash.locked -> 0
+```
+
+Known slot state from captured fastboot output:
+
+```text
+(bootloader) current-slot:a
+(bootloader) slot-unbootable:a:no
+(bootloader) slot-successful:a:yes
+(bootloader) slot-unbootable:b:no
+(bootloader) slot-successful:b:no
+```
+
+Do not continue if these values change unexpectedly.
+
+---
+
+## Recovery Partition Facts
+
+Captured from:
+
+```text
+C:\RM11-test\after-abl-fastboot-getvar-all.txt
+```
+
+Relevant lines:
+
+```text
+(bootloader) partition-type:recovery_a:raw
+(bootloader) partition-size:recovery_a: 0x6400000
+(bootloader) partition-type:recovery_b:raw
+(bootloader) partition-size:recovery_b: 0x6400000
+(bootloader) current-slot:a
+(bootloader) has-slot:boot:yes
+```
+
+No `has-slot:recovery` line was found in the captured output, but `recovery_a` and `recovery_b` exist as explicit raw partitions.
+
+---
+
+## Baseline Images
+
+Stock E: ROM recovery:
+
+```text
+E:\Android\RM-11-Pro\BOOT\02-UL-Rom-16\images\recovery.img
+SHA-256: 1158594EB464748CD5E9313CC10B6505CDD58FE03CE09A9E7DA0B3F7A1E4187D
+```
+
+Byte-identical repacked baseline:
+
+```text
+C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+/home/richtofen/android/output/recovery/rm11-repacked-stock-recovery.img
+SHA-256: 1158594EB464748CD5E9313CC10B6505CDD58FE03CE09A9E7DA0B3F7A1E4187D
+```
+
+Meaning: flashing the repacked baseline should be a no-op content write relative to stock recovery.
+
+---
+
+## Hard Stops
+
+Do not proceed if any of these are true:
+
+- ADB does not show the phone as `device`.
+- Current slot is not `_a`.
+- `sys.boot_completed` is not `1`.
+- `ro.boot.flash.locked` is not `0`.
+- Stock `adb reboot recovery` no longer reaches recovery UI.
+- Recovery touch does not work in stock recovery.
+- Stock recovery backup under E: is missing.
+- The repacked baseline hash differs from stock recovery.
+- You cannot access fastboot after rebooting bootloader.
+
+Never use:
+
+```text
+C:\RM11-test\recovery\force-tests\force-recovery-mode.CRASHDUMP_DO_NOT_BOOT.img
+```
+
+Do not wipe data.
+
+Do not modify or flash:
+
+- `boot_a`
+- `boot_b`
+- `vendor_boot_a`
+- `vendor_boot_b`
+- `init_boot_a`
+- `init_boot_b`
+- `vbmeta`
+- active slot metadata
+
+No slot-B boot tests are needed for this loop.
+
+---
+
+## Preflight Verification Commands
+
+Run from Windows PowerShell before any recovery partition write:
+
+```powershell
+mkdir C:\RM11-test\recovery-partition-plan -Force
+
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb shell getprop ro.boot.verifiedbootstate
+adb shell getprop ro.boot.flash.locked
+
+Get-FileHash -Algorithm SHA256 `
+  E:\Android\RM-11-Pro\BOOT\02-UL-Rom-16\images\recovery.img,`
+  C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+```
+
+Confirm stock recovery UI before writing:
+
+```powershell
+adb reboot recovery
+```
+
+Manual checks:
+
+- recovery UI appears
+- display works
+- touch works
+- do not wipe data
+- return to Android with `Reboot system`
+
+Then confirm fastboot state:
+
+```powershell
+adb reboot bootloader
+fastboot devices
+fastboot getvar all 2>&1 | Out-File -Encoding utf8 C:\RM11-test\recovery-partition-plan\fastboot-getvar-all.txt
+
+Select-String -Path C:\RM11-test\recovery-partition-plan\fastboot-getvar-all.txt `
+  -Pattern 'partition-size:recovery|partition-size:recovery_a|partition-size:recovery_b|has-slot:recovery|has-slot:boot|current-slot|slot-unbootable|slot-successful'
+```
+
+Expected:
+
+```text
+current-slot:a
+partition-size:recovery_a: 0x6400000
+partition-size:recovery_b: 0x6400000
+slot-unbootable:a:no
+slot-unbootable:b:no
+```
+
+---
+
+## No-Op Recovery Partition Write
+
+Purpose: validate the recovery partition writing workflow without changing recovery contents.
+
+Candidate commands:
+
+```powershell
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+```
+
+Do not run these commands until all preflight checks pass.
+
+Rationale for writing both:
+
+- captured fastboot output exposes `recovery_a` and `recovery_b`
+- both partitions are raw and the same size
+- writing the byte-identical stock baseline to both slots avoids slot ambiguity
+- no boot, vendor_boot, init_boot, vbmeta, or active-slot metadata is touched
+
+Rollback command is the same content, using the original E: stock recovery:
+
+```powershell
+fastboot flash recovery_a E:\Android\RM-11-Pro\BOOT\02-UL-Rom-16\images\recovery.img
+fastboot flash recovery_b E:\Android\RM-11-Pro\BOOT\02-UL-Rom-16\images\recovery.img
+```
+
+Because the baseline is byte-identical, rollback should be content-identical as well.
+
+---
+
+## Post-Write Validation
+
+After the no-op write:
+
+```powershell
+fastboot reboot
+```
+
+Wait for Android, then:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb shell getprop ro.boot.verifiedbootstate
+adb shell getprop ro.boot.flash.locked
+adb reboot recovery
+```
+
+Manual recovery checks:
+
+- recovery UI appears
+- display works
+- touch works
+- `View recovery logs` remains accessible
+- no data wipe is performed
+
+Pass criteria:
+
+- Android boots normally after the write
+- current slot remains `_a`
+- recovery still boots through `adb reboot recovery`
+- recovery display/touch still work
+
+Fail criteria:
+
+- black screen
+- CrashDump
+- bootloader loop
+- recovery UI missing
+- touch failure in stock recovery after byte-identical no-op write
+
+If fail occurs:
+
+- do not flash boot/vendor_boot/init_boot
+- return to bootloader if possible
+- reflash original E: stock recovery to `recovery_a` and `recovery_b`
+- restore known-good boot path only if explicitly needed and already verified
+
+---
+
+## Later Minimal Recovery Ramdisk Test
+
+Only after the byte-identical baseline write passes:
+
+1. unpack stock `recovery.img`
+2. add a harmless marker to the recovery ramdisk
+3. repack as a ramdisk-only recovery image
+4. flash only `recovery_a` and `recovery_b`
+5. boot recovery through `adb reboot recovery`
+
+Allowed marker ideas:
+
+- add `/etc/rm11_custom_recovery_marker.txt`
+- add a harmless comment/marker file under a non-executed path
+
+Avoid:
+
+- changing kernel or DTB
+- changing `init_boot`
+- changing `vendor_boot`
+- changing `boot`
+- changing `vbmeta`
+- changing active slots
+- changing recovery UI behavior before marker-only validation
+
+Expected marker validation may require recovery ADB authorization or recovery logs. If recovery ADB remains unauthorized, use only visible/loggable changes that do not affect boot.
+
+---
+
+## Minimal Marker Recovery Image Result
+
+Built a minimal recovery ramdisk marker image from the known-good byte-identical stock recovery baseline.
+
+Image:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-ramdisk.img
+/home/richtofen/android/output/recovery/rm11-recovery-marker-ramdisk.img
+SHA-256: FF1DE80E20EF2CBEA3391351D6F184EBF2023DE30888B1D524F3854D57C01367
+```
+
+Only ramdisk change:
+
+```text
+rm11_recovery_marker.txt
+```
+
+Marker content:
+
+```text
+RM11 recovery marker test
+created=2026-05-24
+source=rm11-repacked-stock-recovery.img
+purpose=ramdisk-only marker validation
+```
+
+Header check:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20459088]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Flashed partitions:
+
+```powershell
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-ramdisk.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-ramdisk.img
+```
+
+Fastboot result:
+
+```text
+Sending 'recovery_a' (102400 KB) OKAY
+Writing 'recovery_a' OKAY
+Sending 'recovery_b' (102400 KB) OKAY
+Writing 'recovery_b' OKAY
+```
+
+Post-flash Android state:
+
+```text
+adb devices      -> 912607710184 device
+ro.boot.slot_suffix -> _a
+sys.boot_completed -> 1
+ro.boot.verifiedbootstate -> orange
+ro.boot.flash.locked -> 0
+```
+
+No boot, vendor_boot, init_boot, vbmeta, or slot metadata was modified.
+
+Next validation:
+
+```powershell
+adb reboot recovery
+```
+
+Manual checks:
+
+- recovery UI appears
+- display works
+- touch works
+- do not wipe data
+- if recovery ADB becomes authorized, check for `/rm11_recovery_marker.txt`
+- otherwise validate only that recovery still boots normally after marker-only ramdisk change
+
+---
+
+## Marker 001 Recovery Image Result
+
+Built a second minimal marker image using the preferred marker text and preserving the existing `/etc -> /system/etc` symlink.
+
+Note: in the stock recovery ramdisk, `/etc` is a symlink to `/system/etc`. To avoid replacing or disturbing that symlink, the marker was placed at:
+
+```text
+system/etc/rm11_recovery_marker.txt
+```
+
+At runtime, this should correspond to:
+
+```text
+/etc/rm11_recovery_marker.txt
+```
+
+Marker content:
+
+```text
+RM11 recovery ramdisk marker test 001
+```
+
+Image:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-001.img
+/home/richtofen/android/output/recovery/rm11-recovery-marker-001.img
+SHA-256: D14DA83E240888B711853E24196C60B647EE5166398F7E2FC27EDEECF535C61E
+```
+
+Header check:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20458935]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Image size:
+
+```text
+104857600 bytes
+```
+
+Partition size:
+
+```text
+0x6400000 = 104857600 bytes
+```
+
+Flash commands executed:
+
+```powershell
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-001.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-001.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+Fastboot result:
+
+```text
+Sending 'recovery_a' (102400 KB) OKAY
+Writing 'recovery_a' OKAY
+Sending 'recovery_b' (102400 KB) OKAY
+Writing 'recovery_b' OKAY
+Setting current slot to 'a' OKAY
+```
+
+Post-flash Android state:
+
+```text
+adb devices      -> 912607710184 device
+ro.boot.slot_suffix -> _a
+sys.boot_completed -> 1
+ro.boot.verifiedbootstate -> orange
+ro.boot.flash.locked -> 0
+```
+
+Recovery boot command sent:
+
+```powershell
+adb reboot recovery
+```
+
+Manual validation result: PASS.
+
+- recovery UI appeared
+- display worked
+- touch worked
+- no CrashDump
+- no FTM
+- no black screen
+- no wipe
+- recovery ADB appeared unauthorized, matching stock recovery behavior
+
+Artifacts/logs:
+
+```text
+C:\RM11-test\recovery-marker-001-flash
+```
+
+Runtime marker visibility status:
+
+- the marker is present in the built image at `system/etc/rm11_recovery_marker.txt`
+- runtime path should be `/etc/rm11_recovery_marker.txt` because stock recovery has `/etc -> /system/etc`
+- recovery ADB remains unauthorized, so direct runtime file verification is not available yet
+- marker-001 still passes as a recovery partition safety test because the modified ramdisk boots stock recovery behavior cleanly
+
+---
+
+## Marker 002 Recommendation
+
+Inspection of the stock recovery ramdisk found a very small `init.recovery.qcom.rc`:
+
+```text
+on init
+    write /sys/class/backlight/panel0-backlight/brightness 200
+    setprop sys.usb.configfs 1
+
+on property:ro.boot.usbcontroller=*
+    setprop sys.usb.controller ${ro.boot.usbcontroller}
+    wait /sys/bus/platform/devices/${ro.boot.usb.dwc3_msm:-a600000.ssusb}/mode
+    write /sys/bus/platform/devices/${ro.boot.usb.dwc3_msm:-a600000.ssusb}/mode peripheral
+    wait /sys/class/udc/${ro.boot.usbcontroller} 1
+
+on fs
+    wait /dev/block/platform/soc/${ro.boot.bootdevice}
+    symlink /dev/block/platform/soc/${ro.boot.bootdevice} /dev/block/bootdevice
+```
+
+Useful stock recovery facts:
+
+- `/etc` is a symlink to `/system/etc`
+- `system/bin/recovery`, `system/bin/minadbd`, `system/bin/logcat`, `system/bin/sh`, `toybox`, and `toolbox` exist
+- recovery file contexts include `/tmp`, `/cache/recovery`, and `/data/misc/recovery`
+- there is no obvious existing script that prints arbitrary marker files into visible recovery logs
+
+Recommended marker-002 method:
+
+1. Keep the marker static and harmless.
+2. Add `system/etc/rm11_recovery_marker_002.txt`.
+3. Add only a comment to `init.recovery.qcom.rc`, for static unpacked-image verification.
+4. Do not add init actions, services, property changes, UI changes, or log-writing behavior yet.
+
+Suggested marker-002 content:
+
+```text
+RM11 recovery ramdisk marker test 002
+purpose=static marker only
+source=rm11-repacked-stock-recovery.img
+```
+
+Suggested `init.recovery.qcom.rc` comment:
+
+```text
+# RM11 recovery marker 002: static ramdisk verification only.
+```
+
+Reasoning:
+
+- marker-001 already proves recovery partition replacement can boot safely with a ramdisk-only change
+- recovery ADB authorization is still the blocker for direct runtime file reads
+- adding an init `exec`, `write`, property, service, or UI-visible mutation would increase behavioral risk before it gives a reliable verification path
+- the next useful test should stay static unless recovery logs or authorized recovery ADB become available
+
+Optional later runtime visibility path, after marker-002 static validation:
+
+- solve recovery ADB authorization, then read `/etc/rm11_recovery_marker_002.txt`
+- or use stock recovery `View recovery logs` if it can expose a controlled marker without changing init behavior
+- only after that consider a low-risk runtime marker such as writing a file under `/tmp`; do not do this in marker-002
+
+---
+
+## Marker 002 Static Image Build Result
+
+Built from the known-good byte-identical stock recovery baseline:
+
+```text
+C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+SHA-256: 1158594EB464748CD5E9313CC10B6505CDD58FE03CE09A9E7DA0B3F7A1E4187D
+```
+
+Output image:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-002.img
+/home/richtofen/android/output/recovery/rm11-recovery-marker-002.img
+SHA-256: D8BF44E93C54EC61AB3D6810B01E21EE36E74A90CB0B458F7BBBFCF4928703C5
+```
+
+Static ramdisk changes only:
+
+```text
+system/etc/rm11_recovery_marker_002.txt
+init.recovery.qcom.rc comment only
+```
+
+Marker content:
+
+```text
+RM11 recovery ramdisk marker test 002
+static file only
+no init actions
+no services
+```
+
+Comment added to `init.recovery.qcom.rc`:
+
+```text
+# RM11 recovery marker 002 static validation
+```
+
+Header verification:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20459092]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Size verification:
+
+```text
+image size:      104857600 bytes
+partition size:  0x6400000 = 104857600 bytes
+```
+
+Note: the image is exactly the same size as the stock/repacked recovery image and exactly matches the recovery partition size. This matches the already validated baseline and marker-001 artifacts.
+
+Repacked ramdisk verification:
+
+- `system/etc/rm11_recovery_marker_002.txt` exists after unpacking the final image
+- marker content matches the requested static text
+- `init.recovery.qcom.rc` contains only the marker comment; no init action, service, property, or UI change was added
+
+Test commands, recovery partitions only:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+
+adb reboot bootloader
+
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-002.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-002.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+Post-flash validation:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb reboot recovery
+```
+
+Manual recovery checks:
+
+- recovery UI appears
+- display works
+- touch works
+- no CrashDump
+- no FTM
+- no black screen
+- do not wipe data
+
+Physical validation result: PASS.
+
+- `recovery_a` write OKAY
+- `recovery_b` write OKAY
+- `fastboot --set-active=a` OKAY
+- Android booted
+- `ro.boot.slot_suffix` remained `_a`
+- `sys.boot_completed` returned `1`
+- `ro.boot.verifiedbootstate` remained `orange`
+- `ro.boot.flash.locked` remained `0`
+- `adb reboot recovery` reached recovery behavior
+- recovery ADB appeared unauthorized, matching stock recovery behavior
+- no CrashDump
+- no FTM
+- no black screen
+
+Conclusion:
+
+- marker-002 confirms static recovery ramdisk modification is safe so far
+- marker-only recovery tests should stop here
+- the next test should be the first minimal functional recovery change, still recovery-partition only
+
+Rollback image:
+
+```text
+C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+```
+
+Rollback commands:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+---
+
+## Next Gate: Minimal Functional Recovery Change
+
+Goal: make one small recovery-only functional change that gives useful evidence without touching boot-critical partitions.
+
+Rules:
+
+- recovery partition only
+- no `boot`, `vendor_boot`, `init_boot`, `vbmeta`, or slot metadata changes
+- no `fastboot boot` recovery validation
+- no force-recovery cmdline image
+- no UI rewrite
+- no service chains or long-running custom daemons
+- no wipe/data-affecting changes
+- keep rollback image ready: `C:\RM11-test\recovery\rm11-repacked-stock-recovery.img`
+
+Recommended first functional target:
+
+1. Enable a controlled, recovery-only observability path.
+2. Keep the change inside the recovery ramdisk.
+3. Prefer a tiny init action that writes a harmless marker into a volatile path such as `/tmp`, only if the stock recovery file contexts and init syntax support it cleanly.
+4. Do not change USB authorization behavior yet unless it is understood from stock recovery files.
+
+Candidate functional test:
+
+```text
+on init
+    write /tmp/rm11_recovery_runtime_marker.txt "RM11 recovery runtime marker 003\n"
+```
+
+This candidate is not approved for flashing yet. First inspect stock recovery init syntax, `/tmp` file context, and whether recovery logs or UI can expose `/tmp` contents. If it cannot be observed, choose a different minimal functional test rather than stacking changes.
+
+Updated observability finding:
+
+- recovery ADB remains unauthorized, so runtime file/property checks are not usable yet
+- `View recovery logs` references runtime files such as `/tmp/recovery.log`, `/cache/recovery/log`, and `/cache/recovery/last_log`
+- a static ramdisk marker will not appear in those logs unless recovery itself or init writes it at runtime
+- menu labels such as `Reboot system`, `Power off`, `Advanced options`, and `View recovery logs` are compiled into `system/bin/recovery`, so changing them would require binary patching
+- the recovery title graphics are plain ramdisk PNG resources under `res/images`
+
+Recommended marker-003 / first functional test:
+
+Change only the English recovery title PNG:
+
+```text
+res/images/recovery_en.png
+```
+
+Replace the title image with a same-size PNG that reads:
+
+```text
+Recovery 003
+```
+
+Keep:
+
+- dimensions: `880 x 224`
+- PNG format
+- simple white background and purple title styling matching stock
+- no menu text changes
+- no binary changes
+- no init actions
+- no services
+- no properties
+- no wipe/data behavior changes
+
+Why this is safe:
+
+- the changed file is a display resource loaded by recovery UI
+- it does not affect partition routing, USB, mounting, wiping, boot control, or ADB authorization
+- it is visible without authorized recovery ADB
+- rollback is the known-good byte-identical stock recovery image
+- if the title changes on screen, it proves the modified recovery ramdisk resource is being loaded by the real recovery boot path
+
+Observation method:
+
+1. Flash the marker-003 image to `recovery_a` and `recovery_b` only.
+2. Reboot Android and confirm slot/state.
+3. Run `adb reboot recovery`.
+4. On the recovery screen, check whether the top title reads `Recovery 003`.
+5. Do not enter wipe flows.
+
+If the title still reads stock `Recovery`, then either the English resource was not selected or another resource controls the visible title. In that case, roll back and inspect the locale/resource selection before changing additional files.
+
+Marker-003 build result:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-003-visible-title.img
+/home/richtofen/android/output/recovery/rm11-recovery-marker-003-visible-title.img
+SHA-256: 2F89BFC538854865A36D6764522ECEC0B7CAAE0DD5985390FC87E24391036766
+```
+
+Preview PNG:
+
+```text
+C:\RM11-test\recovery\marker-003-recovery_en.png
+```
+
+Only changed ramdisk resource:
+
+```text
+res/images/recovery_en.png
+```
+
+Generated PNG verification:
+
+```text
+dimensions: 880 x 224
+mode:       indexed palette PNG
+visible:    Recovery 003
+```
+
+Image header verification:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20456863]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Size verification:
+
+```text
+image size:      104857600 bytes
+partition size:  0x6400000 = 104857600 bytes
+```
+
+Flash commands:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-003-visible-title.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-003-visible-title.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+Post-flash check:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb reboot recovery
+```
+
+Physical validation result: PASS with layout issue.
+
+- recovery booted after flashing `rm11-recovery-marker-003-visible-title.img`
+- UI displayed the modified title resource, proving recovery loaded the modified ramdisk resource
+- text was partially cropped/off-fit on the device
+- menu still worked
+- no CrashDump
+- no FTM
+- no black screen
+
+Conclusion:
+
+- the first visible functional recovery-only change succeeded
+- the only issue was PNG layout/fit
+- marker-004 should correct only `res/images/recovery_en.png`
+
+Marker-004 corrected title build:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-004-visible-title-fit.img
+/home/richtofen/android/output/recovery/rm11-recovery-marker-004-visible-title-fit.img
+SHA-256: 8A3EC1C867DEAD100E665C2B64AFABB8FDF81504467689A5BFA13830315274AC
+```
+
+Preview PNG:
+
+```text
+C:\RM11-test\recovery\marker-004-recovery_en.png
+```
+
+Only changed ramdisk resource:
+
+```text
+res/images/recovery_en.png
+```
+
+Generated PNG verification:
+
+```text
+dimensions: 880 x 224
+mode:       indexed palette PNG
+visible:    Recovery 004
+layout:     smaller centered text with wide margins
+```
+
+Image header verification:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20457088]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Size verification:
+
+```text
+image size:      104857600 bytes
+partition size:  0x6400000 = 104857600 bytes
+```
+
+Marker-004 flash commands:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-004-visible-title-fit.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-004-visible-title-fit.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+Physical validation result: PASS.
+
+- recovery booted after flashing `rm11-recovery-marker-004-visible-title-fit.img`
+- UI showed `Recovery 004` on-device
+- corrected title fit cleanly
+- recovery menu still rendered normally
+- touch/display behavior appeared normal
+- no CrashDump
+- no FTM
+- no black screen
+
+Conclusion:
+
+- recovery partition ramdisk modifications are executing on-device
+- recovery UI PNG resource replacement is validated
+- marker-only and title-fit proof tests are complete
+- recovery-only partition work remains the safe lane
+
+Warnings to keep:
+
+- no `fastboot boot` recovery testing
+- no force-recovery cmdline images
+- no `boot`, `vendor_boot`, `init_boot`, or `vbmeta` changes
+- no wipe/data changes
+- recovery-only partition work remains the safe lane
+
+Pass criteria for the first functional image:
+
+- Android still boots after flashing recovery partitions
+- `adb reboot recovery` still reaches recovery
+- recovery UI/display/touch still work
+- recovery title visibly reads `Recovery 004` and fits cleanly
+- no CrashDump
+- no FTM
+- no black screen
+- no wipe
+- any new behavior is either directly visible or cleanly captured in recovery logs
+
+Rollback:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+---
+
+## Marker 005 Proposal: Second Visible UI Resource
+
+Goal: prove a second harmless recovery UI resource can be replaced without touching recovery code, menu strings, init, properties, boot partitions, or wipe behavior.
+
+Do not build marker-005 until this proposal is reviewed.
+
+Candidate resources inspected:
+
+- `res/images/recovery.png`: non-English/default title image; may not be selected because current locale is `ro.product.locale=en-US`
+- `res/images/recovery_en.png`: already validated by marker-003 and marker-004
+- `res/images/button_normal.png`: unselected menu button background; visible on the main menu and does not contain compiled menu labels
+- `res/images/button_active.png`: selected/active menu button background; visible but state-dependent
+- `res/images/toast.png` and `toast_long.png`: visible only if recovery shows toast messages, so not reliable for immediate confirmation
+
+Recommended marker-005 file:
+
+```text
+res/images/button_normal.png
+```
+
+Planned output image:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-005.img
+```
+
+Expected visual result:
+
+- keep the stock `928 x 160` button background
+- add a tiny `RM11` or `005` mark in the lower-right corner inside the border
+- keep the center area clear so menu labels such as `Reboot system`, `Wipe data`, and `Power off` do not overlap
+- do not alter button dimensions, transparency/palette style, or menu text
+
+Why this is safe:
+
+- it is a static ramdisk PNG resource
+- it changes only unselected button background appearance
+- it does not alter recovery binary code
+- it does not alter menu strings
+- it does not alter init actions, services, USB, ADB, mounts, boot control, wipe behavior, or partition routing
+- it should be visible immediately on the recovery menu without authorized recovery ADB
+
+Build plan:
+
+1. Start from `C:\RM11-test\recovery\rm11-repacked-stock-recovery.img`.
+2. Unpack the ramdisk.
+3. Extract `res/images/button_normal.png`.
+4. Add a tiny lower-right marker while preserving:
+   - dimensions: `928 x 160`
+   - PNG format
+   - center/label area
+   - stock border and background
+5. Repack as a ramdisk-only recovery image.
+6. Copy output to `C:\RM11-test\recovery\rm11-recovery-marker-005.img`.
+7. Record SHA-256 after build.
+
+Marker-005 build result:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-005.img
+/home/richtofen/android/output/recovery/rm11-recovery-marker-005.img
+SHA-256: 694EBA1214FF90F1DA496C2108E98479167B15F3F7EB631DEB64493402303394
+```
+
+Preview PNG:
+
+```text
+C:\RM11-test\recovery\marker-005-button_normal.png
+```
+
+Changed file list:
+
+```text
+res/images/button_normal.png
+```
+
+Generated PNG verification:
+
+```text
+dimensions: 928 x 160
+mode:       indexed palette PNG
+visible:    tiny 005 mark in lower-right corner
+```
+
+Image header verification:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20458673]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Size verification:
+
+```text
+image size:      104857600 bytes
+partition size:  0x6400000 = 104857600 bytes
+```
+
+Physical validation result: PASS.
+
+- `recovery_a` flash OKAY
+- `recovery_b` flash OKAY
+- `fastboot --set-active=a` OKAY
+- Android booted after flash
+- `sys.boot_completed=1`
+- `ro.boot.slot_suffix=_a`
+- `adb reboot recovery` reached recovery
+- recovery UI rendered normally
+- `button_normal.png` background resource change appeared active/visible
+- menu labels remained readable
+- no CrashDump
+- no FTM
+- no black screen
+
+Conclusion:
+
+- marker-005 validates a second recovery UI PNG resource path on-device
+- previously validated `res/images/recovery_en.png` through marker-003/004
+- now validated `res/images/button_normal.png` through marker-005
+- stop UI-resource proof tests
+- recovery partition + recovery ramdisk + recovery UI resource modification lane is validated enough
+
+Marker-005 image requirements:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      nonzero
+RAMDISK_FMT     [lz4_legacy]
+image size      <= 0x6400000
+```
+
+Keep unchanged:
+
+- `boot`
+- `vendor_boot`
+- `init_boot`
+- `vbmeta`
+- active slot metadata
+- `system/bin/recovery`
+- menu strings
+- init scripts/actions/services
+- properties
+- wipe/data behavior
+
+Observation method:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb reboot bootloader
+
+fastboot devices
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-005.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-005.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+After Android boots:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb reboot recovery
+```
+
+On the main recovery menu:
+
+- check whether unselected button backgrounds show the small lower-right marker
+- confirm the title remains clean
+- confirm menu text is not obstructed
+- do not enter wipe flows
+
+Pass criteria:
+
+- Android still boots after flashing recovery partitions
+- `adb reboot recovery` reaches recovery
+- recovery menu appears normally
+- small marker is visible on unselected button background
+- menu labels remain readable
+- touch/display still work
+- no CrashDump
+- no FTM
+- no black screen
+- `Reboot system` returns Android
+- no wipe/data change
+
+Fail criteria:
+
+- marker overlaps menu labels
+- button backgrounds render incorrectly
+- recovery UI does not appear
+- touch/display behavior regresses
+- CrashDump, FTM, black screen, or boot loop
+
+Rollback:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+Fallback marker-005 if button background marking is rejected:
+
+```text
+res/images/recovery_en.png
+```
+
+Use a polished stable title:
+
+```text
+RM11 Recovery
+```
+
+This fallback is less useful as a second resource proof, but it would produce a cleaner stable custom recovery title baseline.
+
+---
+
+## Next Phase: Touchscreen/Input Investigation
+
+Goal: move from recovery UI proof-of-control to touchscreen/input evidence collection and recovery-side comparison. Do not build a new image until the evidence points to a specific low-risk change.
+
+Hard restrictions remain:
+
+- no `fastboot boot` recovery path
+- no force-recovery cmdline images
+- no `boot`, `vendor_boot`, `init_boot`, or `vbmeta` changes unless separately justified
+- no wipe/data changes
+- no risky init services/actions
+- recovery partition only for the current safe lane
+
+Initial stock recovery ramdisk findings:
+
+- `system/etc/ueventd.rc` creates input nodes under `/dev/input`
+- `/dev/input/*` is assigned `0660 root input`
+- `/sys/devices/virtual/input/input*` exposes `enable` and `poll_delay` permissions
+- `plat_file_contexts` labels `/dev/input(/.*)?` as `input_device`
+- `plat_property_contexts` contains recovery/minui properties:
+  - `ro.minui.default_rotation`
+  - `ro.minui.overscan_percent`
+  - `ro.minui.pixel_format`
+- `prop.default` contains `ro.minui.pixel_format=RGBX_8888`
+- vendor file contexts contain touch-related paths:
+  - `/sys/devices/platform/synaptics_tcm.0/sysfs(/.*)?`
+  - `/sys/bus/platform/devices/synaptics_tcm.0/uevent`
+  - `/sys/devices/virtual/tsp_fw/touchscreen(/.*)?`
+  - `/sys/bus/platform/devices/zte_touch/uevent`
+  - `/data/vendor/touchscreen(/.*)?`
+  - `/dev/v4l-touch[0-9]*`
+  - `/dev/hbtp_input`
+- `system/bin/recovery` strings do not show obvious `syna`, `synaptics`, `zte_tpd`, or touchscreen firmware filenames; input handling is likely generic recovery/minui evdev behavior plus kernel/input driver availability
+
+Evidence to collect from Android while the device is safely booted:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb shell getevent -lp
+adb shell dumpsys input
+adb shell ls -l /dev/input
+adb shell cat /proc/bus/input/devices
+adb shell getprop | findstr /i "touch input minui syna synaptics tpd zte"
+adb shell logcat -d | findstr /i "touch input syna synaptics tpd zte_tpd zte_touch minui evdev"
+```
+
+If root is available later:
+
+```powershell
+adb shell su -c "dmesg | grep -iE 'touch|input|syna|synaptics|tpd|zte_touch|evdev|minui'"
+adb shell su -c "ls -R /sys/devices/platform/synaptics_tcm.0 /sys/bus/platform/devices/zte_touch /sys/devices/virtual/tsp_fw/touchscreen 2>/dev/null"
+adb shell su -c "cat /proc/kallsyms | grep -iE 'syna|synaptics|zte_tpd|input_register_device'"
+```
+
+Comparison questions:
+
+- What is the Android touchscreen input device name, vendor, product, bus, and event node?
+- Does Android expose touch through `/dev/input/event*`, `/dev/v4l-touch*`, `/dev/hbtp_input`, or another path?
+- Which driver owns the device: `synaptics_tcm`, `zte_touch`, `zte_tpd`, or another wrapper?
+- Are firmware/config paths needed from `/vendor/firmware`, `/data/vendor/touchscreen`, or `/sys/devices/virtual/tsp_fw/touchscreen`?
+- Does recovery minui need only a normal evdev device, or is touch being transformed by an Android userspace service that recovery does not run?
+- Is any orientation/rotation mismatch indicated by `ro.minui.default_rotation` or the Android input transform?
+
+Likely issue classes to separate:
+
+- kernel driver does not initialize touch in recovery path
+- DTB/input node mismatch
+- recovery/minui generic input handling mismatch
+- missing firmware/config in recovery ramdisk or unavailable mounted path
+- panel/touch orientation or coordinate mapping issue
+- input device exists but permissions/uevent timing prevent recovery from opening it
+
+First possible recovery-only change should be chosen only after evidence collection. Candidate categories:
+
+- add a harmless recovery UI/input diagnostic resource if visual-only evidence is still needed
+- add minimal recovery ramdisk config only if stock recovery expects a file that is missing
+- adjust recovery/minui properties only if a clear rotation/pixel/input mismatch is found
+- avoid init services/actions until there is a specific, testable need
+
+---
+
+## Next Technical Investigation
+
+Compare stock recovery boot environment versus Android after `fastboot boot`:
+
+- bootconfig
+- `ro.bootmode`
+- `ro.boot.bootreason`
+- `ro.boot.slot_suffix`
+- `init_boot` digest
+- `vendor_boot` digest
+- `misc` / BCB command
+- `/proc/cmdline`
+- `/proc/bootconfig`
+
+Current limitation: `/proc/cmdline`, `/proc/bootconfig`, raw `misc`, dmesg, and pstore are restricted without root or authorized recovery ADB.

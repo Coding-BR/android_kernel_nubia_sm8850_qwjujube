@@ -4,6 +4,37 @@ Este guia estabelece o padrão obrigatório de qualidade e segurança para teste
 
 ---
 
+## Current Project Synopsis
+
+The RM11 Pro / NX809J recovery lane is now validated for recovery-partition-only development.
+
+Current recovery facts:
+
+- ABL unlock/restoration enabled working fastboot commands.
+- `fastboot boot` is not a valid recovery-mode validation path on this device.
+- Stock recovery boots through `adb reboot recovery`.
+- Stock recovery display and touch work.
+- Recovery ADB remains unauthorized, matching stock recovery behavior.
+- `recovery_a` and `recovery_b` can be flashed safely.
+- Byte-identical repacked stock recovery flashed to both recovery slots and still booted Android/recovery.
+- marker-001 and marker-002 proved static ramdisk modifications are safe so far.
+- marker-003 and marker-004 proved modified recovery ramdisk PNG resources execute on-device.
+
+Current safe lane:
+
+- use `recovery_a` and `recovery_b` only for recovery validation
+- do not use `fastboot boot` for recovery validation
+- keep rollback ready: `C:\RM11-test\recovery\rm11-repacked-stock-recovery.img`
+
+Hard restrictions:
+
+- no forced recovery cmdline images
+- no `boot`, `vendor_boot`, `init_boot`, or `vbmeta` work
+- no wipe/data behavior changes
+- no services/init actions unless separately reviewed
+
+---
+
 ## 1. O Problema do Carregamento Precoce (Early Boot Loading)
 
 No sistema Android moderno, os drivers essenciais de hardware (Touch Screen `zte_tpd`, Charger Policy `zte_charger_policy`, reguladores de voltagem, etc.) são carregados pelo processo `init` nos estágios iniciais de inicialização do sistema (`early-init` / `init`).
@@ -117,6 +148,90 @@ Esta é a melhor prática para ciclos rápidos de desenvolvimento e validação 
    * O kernel e seus drivers estáticos iniciarão diretamente na memória RAM.
    * Quando o Android carregar as partições do celular, as requisições de inicialização dos drivers em `/vendor_dlkm` serão ignoradas pelo kernel, pois a estrutura de controle já estará rodando na RAM.
    * **Se o sistema falhar/travar:** Pressione e segure o botão *Power* por 10 segundos. O smartphone reiniciará usando as partições gravadas fisicamente originais, eliminando riscos.
+
+---
+
+### Estratégia 1B: Recovery Temporário com Kernel Built-in
+Use esta variação quando o objetivo for testar uma ramdisk de recovery ou preparar custom recovery sem gravar partições.
+
+No NX809J, o `recovery.img` stock é uma imagem de recovery com ramdisk, mas sem kernel próprio:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20458914]
+RAMDISK_FMT     [lz4_legacy]
+```
+
+Por isso, o primeiro teste seguro usa o `boot.img` stock como base de header/kernel container, injeta o `Image` rebuildado + `dtb.img`, e substitui a ramdisk pela ramdisk do `recovery.img`.
+
+Artifact atual recomendado:
+
+```text
+/home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img
+SHA-256: da0cc68e4d814927d8232dadafd27a4c0741b8e547f2f457e1325113cf15788f
+```
+
+Base ROM usada:
+
+```text
+/mnt/e/Android/RM-11-Pro/BOOT/02-UL-Rom-16/images
+```
+
+Comando de teste:
+
+```bash
+fastboot boot /home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img
+```
+
+Critérios de decisão:
+
+| Resultado | Próxima ação |
+| :--- | :--- |
+| Recovery inicia e touch funciona | Prosseguir para custom recovery ramdisk usando este kernel como base |
+| Recovery inicia sem touch | Coletar logs e continuar reparo de `zte_tpd` |
+| CrashDump/reboot | Voltar ao boot stock e coletar `scratch/ramoops.log` |
+
+Regra obrigatória: esta imagem é somente para `fastboot boot`. Não usar `fastboot flash` neste estágio.
+
+#### Resultado físico: `fastboot boot` não seleciona recovery
+
+O teste físico mostrou que a imagem temporária com kernel/DTB customizados + ramdisk stock de recovery inicia Android, não recovery. Um teste de isolamento com kernel stock + DTB stock + ramdisk stock de recovery também iniciou Android:
+
+```text
+C:\RM11-test\recovery\rm11-stock-kernel-recovery-ramdisk-fastboot.img
+SHA-256: ebe6bb82c4c6ab90bacb7b54cceb9486aaf25d69dd54657ceeda76aebbda5d06
+```
+
+Conclusão: neste aparelho, `fastboot boot` valida que a imagem é carregável pelo bootloader, mas não reproduz o handoff de recovery. A seleção real de recovery depende do caminho `adb reboot recovery` / bootloader recovery, BCB em `misc`, bootconfig e/ou comportamento de `init_boot`/`vendor_boot`.
+
+Nova regra: não criar mais imagens com flags aleatórias `androidboot.*=recovery`. Uma tentativa com `androidboot.mode=recovery` e `androidboot.bootmode=recovery` causou CrashDump.
+
+#### Próximo protocolo seguro: partição recovery
+
+O próximo passo controlado está documentado em:
+
+```text
+RECOVERY_PARTITION_TEST_PLAN.md
+```
+
+O primeiro teste de partição deve ser um no-op: gravar somente `recovery_a` e `recovery_b` com a imagem repackada que é byte-idêntica ao stock `recovery.img`.
+
+Baseline:
+
+```text
+C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+SHA-256: 1158594EB464748CD5E9313CC10B6505CDD58FE03CE09A9E7DA0B3F7A1E4187D
+```
+
+Comandos candidatos, apenas após todos os preflights do plano:
+
+```powershell
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+```
+
+Não tocar em `boot`, `vendor_boot`, `init_boot`, `vbmeta` ou metadata de slot ativo neste protocolo.
 
 ---
 
