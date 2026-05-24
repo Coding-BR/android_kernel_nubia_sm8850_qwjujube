@@ -5,7 +5,7 @@ cd "$(dirname "$(readlink -f "$0")")"
 
 # Tools paths (can be overridden via environment variables)
 CLANG_DIR="${CLANG_DIR:-$(pwd)/clang-r536225}"
-PREBUILTS_DIR="${PREBUILTS_DIR:-/home/adrianojr59/Downloads/KernelNX809J/infinity_build/prebuilts/kernel-build-tools/linux-x86/bin}"
+PREBUILTS_DIR="${PREBUILTS_DIR:-$(pwd)/prebuilts/kernel-build-tools/linux-x86/bin}"
 
 if [ ! -d "$CLANG_DIR" ]; then
     echo "❌ Error: Clang compiler not found at $CLANG_DIR"
