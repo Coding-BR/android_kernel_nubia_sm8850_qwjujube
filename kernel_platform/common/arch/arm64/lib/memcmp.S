@@ -33,6 +33,26 @@
 #define tmp2		x8
 
 SYM_FUNC_START(__pi_memcmp)
+	/* Safety check for truncated src1 */
+	lsr	x3, x0, #32
+	cbnz	x3, .L_memcmp_src2
+	cbz	x0, .L_memcmp_src2
+	/* Restore truncated src1 */
+	adr	x3, .
+	lsr	x3, x3, #32
+	bfi	x0, x3, #32, #32
+
+.L_memcmp_src2:
+	/* Safety check for truncated src2 */
+	lsr	x3, x1, #32
+	cbnz	x3, .L_memcmp_go
+	cbz	x1, .L_memcmp_go
+	/* Restore truncated src2 */
+	adr	x3, .
+	lsr	x3, x3, #32
+	bfi	x1, x3, #32, #32
+
+.L_memcmp_go:
 	subs	limit, limit, 8
 	b.lo	L(less8)
 

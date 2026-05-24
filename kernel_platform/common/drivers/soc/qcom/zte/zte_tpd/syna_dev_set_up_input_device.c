@@ -61,27 +61,37 @@ __int64 __fastcall syna_dev_set_up_input_device(__int64 a1)
     device = devm_input_allocate_device((struct device *)syna_request_managed_device(v6));
     if ( device )
     {
+      struct input_dev *input_dev = (struct input_dev *)device;
+      struct platform_device *pdev = *(struct platform_device **)(a1 + 8);
+      struct device *parent = pdev ? &pdev->dev : NULL;
+
       v11 = device;
-      *(_QWORD *)device = "synaptics_tcm_touch";
-      *(_QWORD *)(device + 8) = "synaptics_tcm/touch_input";
-      *(_DWORD *)(device + 28) = 65537;
-      v12 = *(_QWORD *)(*(_QWORD *)(a1 + 8) + 112LL);
-      *(_QWORD *)(device + 712) = a1;
-      *(_QWORD *)(device + 656) = v12;
-      *(unsigned long *)(device + 40) |= 0xB;
-      *(unsigned long *)(device + 88) |= 0x420;
-      *(unsigned long *)(device + 32) |= 2;
-      *(unsigned long *)(device + 64) |= 0x8000;
+      input_dev->name = "synaptics_tcm_touch";
+      input_dev->phys = "synaptics_tcm/touch_input";
+      input_dev->id.bustype = 1;
+      input_dev->id.vendor = 1;
+
+      input_dev->dev.parent = parent;
+      input_set_drvdata(input_dev, (void *)a1);
+
+      __set_bit(INPUT_PROP_DIRECT, input_dev->propbit);
+      __set_bit(EV_SYN, input_dev->evbit);
+      __set_bit(EV_KEY, input_dev->evbit);
+      __set_bit(EV_ABS, input_dev->evbit);
+      __set_bit(KEY_WAKEUP, input_dev->keybit);
+      __set_bit(BTN_TOUCH, input_dev->keybit);
+      __set_bit(BTN_TOOL_FINGER, input_dev->keybit);
+
       input_set_capability(device, 1, 143);
-      input_set_abs_params(v11, 53, 0, v7[4], 0, 0);
-      input_set_abs_params(v11, 54, 0, v7[5], 0, 0);
-      input_mt_init_slots(v11, v7[6], 2);
-      input_set_abs_params(v11, 48, 0, 255, 0, 0);
-      input_set_abs_params(v11, 49, 0, 255, 0, 0);
+      input_set_abs_params(input_dev, 53, 0, v7[4], 0, 0);
+      input_set_abs_params(input_dev, 54, 0, v7[5], 0, 0);
+      input_mt_init_slots(input_dev, v7[6], 2);
+      input_set_abs_params(input_dev, 48, 0, 255, 0, 0);
+      input_set_abs_params(input_dev, 49, 0, 255, 0, 0);
       *(_DWORD *)(a1 + 952) = v7[4];
       *(_DWORD *)(a1 + 956) = v7[5];
       *(_DWORD *)(a1 + 960) = v7[6];
-      v13 = input_register_device(v11);
+      v13 = input_register_device(input_dev);
       if ( (v13 & 0x80000000) == 0 )
       {
         v15 = *(unsigned int **)a1;

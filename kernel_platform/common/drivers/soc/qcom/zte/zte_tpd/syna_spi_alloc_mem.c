@@ -23,7 +23,7 @@ LABEL_12:
       return 0;
     if ( rx_buf )
     {
-      if ( p_device && (v9 = *(_QWORD *)(p_device + 112)) != 0 )
+      if ( p_device && (v9 = syna_request_managed_device()) != 0 )
         devm_kfree(v9, rx_buf);
       else
         printk(unk_3BE43, "syna_pal_mem_free", v8);
@@ -31,20 +31,20 @@ LABEL_12:
     }
     if ( tx_buf )
     {
-      if ( p_device && (v10 = *(_QWORD *)(p_device + 112)) != 0 )
+      if ( p_device && (v10 = syna_request_managed_device()) != 0 )
         devm_kfree(v10, tx_buf);
       else
         printk(unk_3BE43, "syna_pal_mem_free", v8);
       tx_buf = 0;
     }
-    if ( p_device && (v11 = *(_QWORD *)(p_device + 112)) != 0 )
+    if ( p_device && (v11 = syna_request_managed_device()) != 0 )
     {
       if ( (int)a2 > 0 )
       {
         rx_buf = devm_kmalloc(v11, a2, 3520);
         if ( rx_buf )
         {
-          if ( p_device && (v13 = *(_QWORD *)(p_device + 112)) != 0 )
+          if ( p_device && (v13 = syna_request_managed_device()) != 0 )
           {
             tx_buf = devm_kmalloc(v13, a2, 3520);
             if ( tx_buf )
@@ -78,7 +78,7 @@ LABEL_45:
     rx_buf = 0;
     goto LABEL_44;
   }
-  if ( p_device && (v5 = *(_QWORD *)(p_device + 112)) != 0 )
+  if ( p_device && (v5 = syna_request_managed_device()) != 0 )
   {
     if ( xfer )
       devm_kfree(v5, xfer);
@@ -93,7 +93,7 @@ LABEL_45:
     if ( !p_device )
       goto LABEL_33;
   }
-  v7 = *(_QWORD *)(v6 + 112);
+  v7 = syna_request_managed_device();
   if ( !v7 )
   {
 LABEL_33:

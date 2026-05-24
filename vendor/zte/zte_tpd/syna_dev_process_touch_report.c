@@ -228,6 +228,7 @@ LABEL_56:
     input_event(v10, 1, 330, 0);
     input_event(v10, 1, 325, 0);
   }
+  input_mt_sync_frame(v10);
   input_event(v10, 0, 0, 0);
 LABEL_58:
   mutex_unlock(a4 + 632);

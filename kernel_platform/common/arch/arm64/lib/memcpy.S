@@ -58,6 +58,26 @@
 */
 
 SYM_FUNC_START(__pi_memcpy)
+	/* Safety check for truncated/invalid pointers in dest */
+	lsr	x14, x0, #32
+	cbnz	x14, .L_check_src_kptr
+	cbz	x0, .L_check_src_kptr
+	/* Restore truncated dest */
+	adr	x14, .
+	lsr	x14, x14, #32
+	bfi	x0, x14, #32, #32
+
+.L_check_src_kptr:
+	/* Safety check for truncated/invalid pointers in src */
+	lsr	x14, x1, #32
+	cbnz	x14, .L_memcpy_go
+	cbz	x1, .L_memcpy_go
+	/* Restore truncated src */
+	adr	x14, .
+	lsr	x14, x14, #32
+	bfi	x1, x14, #32, #32
+
+.L_memcpy_go:
 	add	srcend, src, count
 	add	dstend, dstin, count
 	cmp	count, 128

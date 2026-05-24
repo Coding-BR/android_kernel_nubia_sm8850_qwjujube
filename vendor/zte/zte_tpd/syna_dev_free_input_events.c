@@ -26,6 +26,7 @@ __int64 __fastcall syna_dev_free_input_events(__int64 result)
       printk(unk_3A18D, "syna_dev_free_input_events", v5);
     }
     report_ufp_uevent(0);
+    input_mt_sync_frame(v1);
     input_event(v1, 0, 0, 0);
     return mutex_unlock(v2 + 632);
   }

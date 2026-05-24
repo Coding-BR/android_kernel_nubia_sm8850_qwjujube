@@ -102,7 +102,7 @@ LABEL_40:
           printk(v14, "syna_spi_power_on", v5);
           return v7;
         }
-        v7 = regulator_enable();
+        v7 = regulator_enable(*(_QWORD *)(a1 + 272));
         if ( (v7 & 0x80000000) != 0 )
         {
           v14 = unk_399EE;
@@ -146,7 +146,7 @@ LABEL_16:
   }
   if ( *(_QWORD *)(a1 + 312) < 0xFFFFFFFFFFFFF001LL )
   {
-    v7 = regulator_enable();
+    v7 = regulator_enable(*(_QWORD *)(a1 + 312));
     if ( (v7 & 0x80000000) != 0 )
     {
       v14 = unk_325D6;

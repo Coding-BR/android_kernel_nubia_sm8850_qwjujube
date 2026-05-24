@@ -61,10 +61,12 @@ echo "⚙️ Appending custom configuration overrides..."
     echo 'CONFIG_MODVERSIONS=y'
     echo 'CONFIG_BASIC_MODVERSIONS=y'
     echo 'CONFIG_EXTENDED_MODVERSIONS=y'
+    echo '# CONFIG_RANDOMIZE_BASE is not set'
 } >> $KERNEL_DIR/.config
 
 # Process config overrides
 echo "🔄 Updating defconfig with overrides..."
+$KERNEL_DIR/scripts/config --file $KERNEL_DIR/.config -d RANDOMIZE_BASE
 make -C $KERNEL_DIR LLVM=1 LLVM_IAS=1 olddefconfig
 
 echo "🧹 Force-disabling BTF/DWARF debug metadata..."

@@ -43,6 +43,15 @@ tmp3w		.req	w9
 tmp3		.req	x9
 
 SYM_FUNC_START(__pi_memset)
+	/* Safety check for truncated/invalid pointers in dest */
+	lsr	x3, x0, #32
+	cbnz	x3, 1f
+	cbz	x0, 1f
+	/* Restore truncated dest */
+	adr	x3, .
+	lsr	x3, x3, #32
+	bfi	x0, x3, #32, #32
+1:
 	mov	dst, dstin	/* Preserve return value.  */
 	and	A_lw, val, #255
 	orr	A_lw, A_lw, A_lw, lsl #8

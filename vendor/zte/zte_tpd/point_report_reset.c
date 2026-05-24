@@ -25,6 +25,7 @@ __int64 __fastcall point_report_reset(__int64 result, __int64 a2, __int64 a3, __
       mutex_lock(v8 + 2776);
       input_event(*((_QWORD *)v6 + 16), 3, 47, v7);
       input_mt_report_slot_state(*((_QWORD *)v6 + 16), 0, 0);
+      input_mt_sync_frame(*((_QWORD *)v6 + 16));
       input_event(*((_QWORD *)v6 + 16), 0, 0, 0);
       mutex_unlock(v8 + 2776);
       usleep_range_state(1000, 1100, 2);

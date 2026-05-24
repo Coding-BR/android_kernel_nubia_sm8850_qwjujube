@@ -132,15 +132,15 @@ __int64 __fastcall zte_touch_probe(__int64 a1)
 
   v130 = *(_QWORD *)(_ReadStatusReg(SP_EL0) + 1808);
   printk(unk_322D0, "zte_touch_probe", 2858);
-  v2 = devm_kmalloc(a1 + 16, 3664, 3520);
+  v2 = devm_kmalloc(&((struct platform_device *)a1)->dev, 3664, 3520);
   if ( v2 )
   {
     v5 = v2;
     *(_QWORD *)(v2 + 3088) = a1;
     tpd_cdev = v2;
-    *(_QWORD *)(a1 + 168) = v2;
+    zte_touch_dev_global = (void *)v2;
     zte_touch_pdev_register(v2, v3, v4);
-    v6 = *(_QWORD *)(a1 + 760);
+    v6 = (__int64)((struct platform_device *)a1)->dev.of_node;
     v129 = 0;
     property = of_find_property(v6, "zte,tp_algo", 0);
     *(_BYTE *)(v5 + 27) = property != 0;
@@ -358,7 +358,7 @@ __int64 __fastcall zte_touch_probe(__int64 a1)
     v107 = *(_QWORD *)(tpd_cdev + 3096);
     if ( v107 )
     {
-      v108 = kobject_create_and_add("fwupdate", v107 + 16);
+      v108 = kobject_create_and_add("fwupdate", &((struct platform_device *)v107)->dev.kobj);
       *(_QWORD *)(v106 + 2712) = v108;
       if ( v108 )
       {

@@ -144,7 +144,7 @@ LABEL_11:
     printk(v9, "syna_dev_connect", "synaptics_tcm");
     return 0;
   }
-  v24 = -22;
+  v24 = -517; // -EPROBE_DEFER
   v25 = unk_3BE43;
 LABEL_37:
   printk(v25, "syna_dev_request_irq", v23);

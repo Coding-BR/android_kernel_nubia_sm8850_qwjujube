@@ -169,6 +169,7 @@ LABEL_89:
               printk(unk_37C4E, v49, *v17);
 LABEL_92:
               tpd_touch_report(a1, *v17, v17[1], a4, a5, a6);
+              input_mt_sync_frame(a1);
               input_event(a1, 0, 0, 0);
               usleep_range_state(1000, 1500, 2);
               if ( (*((_BYTE *)v17 + 83) & 1) != 0 )

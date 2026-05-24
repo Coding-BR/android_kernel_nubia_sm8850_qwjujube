@@ -22,9 +22,7 @@ __int64 __fastcall zte_touch_pdev_register(__int64 a1, __int64 a2, __int64 a3)
       v9 = v6;
       printk(unk_3AF12, "zte_touch_pdev_register", v6);
       v10 = *(_QWORD *)(v3 + 3096);
-      v11 = *(void (__fastcall **)(_QWORD))(v10 + 824);
-      /* CFI check removed */
-      v11(v10 + 16);
+      platform_device_put((struct platform_device *)v10);
       result = v9;
       v8 = NULL;
     }
