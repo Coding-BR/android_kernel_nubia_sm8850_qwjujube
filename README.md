@@ -117,13 +117,68 @@ Run:
 
 ---
 
-## 🛠️ 2. Project Next Steps
+## 🧪 2. Recovery Touchscreen Test Image
+
+The current custom recovery work does **not** start by flashing `recovery.img`. On the NX809J, the stock `recovery.img` is a ramdisk-only Android boot image:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_FMT     [lz4_legacy]
+```
+
+For the first safe test, use a boot-header based image that combines:
+
+* stock E: ROM `boot.img` as the boot container
+* stock E: ROM `recovery.img` ramdisk
+* rebuilt kernel `Image`
+* rebuilt `dtb.img`
+* built-in `zte_tpd` touchscreen refactor from `codex/zte-tpd-input-device-refactor`
+
+Current first-test artifact:
+
+```text
+/home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img
+SHA-256: da0cc68e4d814927d8232dadafd27a4c0741b8e547f2f457e1325113cf15788f
+```
+
+Boot it temporarily:
+
+```bash
+fastboot boot /home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img
+```
+
+> [!WARNING]
+> Do **not** use `fastboot flash` for this image. It is only a temporary boot test.
+
+Decision path:
+
+| Result | Next action |
+| :--- | :--- |
+| Recovery boots and touch works | Begin custom recovery ramdisk adaptation using this kernel base |
+| Recovery boots but touch does not work | Collect logs and continue `zte_tpd` repair |
+| CrashDump/reboot | Boot stock again and collect `scratch/ramoops.log` |
+
+The full manifest is stored at:
+
+```text
+/home/richtofen/android/output/recovery/RM11_RECOVERY_TEST_MANIFEST.md
+```
+
+---
+
+## 🛠️ 3. Project Next Steps
 
 Now that we have achieved stable binary parity compatibility (where the custom kernel loads and runs the system normally), we can begin the specific development tasks described in [NEXT_STEPS.md](NEXT_STEPS.md):
 
-### 1. Deploy and Test Rebuilt Modules (.ko)
-Since booting via RAM uses the physical partitions and mounts `/vendor_dlkm` from the original system, the active modules at the moment are ZTE's original ones. To execute our rebuilt modules (reconstructed from Ghidra source code):
-* **Built-in Method:** Modify the `Kbuild` of the drivers we rebuilt (such as `zte_charger_policy` and `zte_led`), changing the compilation to built-in (`obj-y` instead of `obj-m`). This way, they will be compiled directly inside the `Image` file and loaded before the system initializes the official ones.
+### 1. Validate `zte_tpd` in Recovery
+The active touchscreen path for this device is the reconstructed ZTE/Synaptics driver under:
+
+```text
+kernel_platform/common/drivers/soc/qcom/zte/zte_tpd/
+```
+
+The current branch `codex/zte-tpd-input-device-refactor` fixes the obvious `struct input_dev` corruption risk by replacing raw offset writes such as `device + 656` and `device + 712` with named fields and kernel input helpers. The next proof point is physical testing through the recovery image above.
 
 ### 2. GPU Overclock to 1200MHz+
 * Extract and decompile the original Device Tree (`dtb.img` or `dtbo.img`) into text format (`.dts`).
@@ -132,7 +187,7 @@ Since booting via RAM uses the physical partitions and mounts `/vendor_dlkm` fro
 * Recompile the tree and test via `fastboot boot`.
 
 ### 3. Full Integration of Other Techpacks
-* Adapt and compile the touch modules (`touch-drivers`) to validate physical screen interaction using our tree.
+* Continue `zte_tpd` validation from real recovery logs instead of starting from generic `goodix` or `focaltech` touch modules.
 * Validate mobile network connectivity (`dataipa`).
 
 ### 4. Audit of Proprietary Locks and CFI
