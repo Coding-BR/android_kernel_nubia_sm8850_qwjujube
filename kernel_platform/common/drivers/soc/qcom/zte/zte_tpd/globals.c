@@ -44,14 +44,14 @@ uint64_t qword_31700 = 0;
 uint64_t qword_31708 = 0;
 uint64_t qword_31710 = 0;
 uint64_t qword_BE8 = 0;
-uint64_t qword_BF4 = 0;
-uint64_t qword_C90 = 0;
-uint64_t qword_CE8 = 0;
-uint64_t qword_CF0 = 0;
-uint64_t qword_D10 = 0;
-uint64_t qword_D18 = 0;
-uint64_t qword_D40 = 0;
-uint64_t qword_D50 = 0;
+// uint64_t qword_BF4 = 0;
+// uint64_t qword_C90 = 0;
+// uint64_t qword_CE8 = 0;
+// uint64_t qword_CF0 = 0;
+// uint64_t qword_D10 = 0;
+// uint64_t qword_D18 = 0;
+// uint64_t qword_D40 = 0;
+// uint64_t qword_D50 = 0;
 
 // dwords definitions
 uint32_t dword_30EFF = 0;
@@ -76,31 +76,31 @@ uint32_t dword_313C7 = 0;
 uint32_t dword_313CC = 0;
 uint32_t dword_31428 = 0;
 struct completion dword_314A0;
-uint32_t dword_C40 = 0;
-uint32_t dword_C44 = 0;
-uint32_t dword_C48 = 0;
-uint32_t dword_C80 = 0;
-uint32_t dword_C84 = 0;
-uint32_t dword_C88 = 0;
-uint32_t dword_C8C = 0;
-uint32_t dword_CD0 = 0;
-uint32_t dword_CD4 = 0;
-uint32_t dword_CD8 = 0;
-uint32_t dword_CDC = 0;
-uint32_t dword_CE0 = 0;
-uint32_t dword_CF8 = 0;
-uint32_t dword_D00 = 0;
-uint32_t dword_D04 = 0;
-uint32_t dword_D08 = 0;
-uint32_t dword_D20 = 0;
-uint32_t dword_D28 = 0;
-uint32_t dword_D2C = 0;
-uint32_t dword_D30 = 0;
-uint32_t dword_D34 = 0;
-uint32_t dword_D38 = 0;
-uint32_t dword_D48 = 0;
-uint32_t dword_D4C = 0;
-uint32_t dword_D58 = 0;
+// uint32_t dword_C40 = 0;
+// uint32_t dword_C44 = 0;
+// uint32_t dword_C48 = 0;
+// uint32_t dword_C80 = 0;
+// uint32_t dword_C84 = 0;
+// uint32_t dword_C88 = 0;
+// uint32_t dword_C8C = 0;
+// uint32_t dword_CD0 = 0;
+// uint32_t dword_CD4 = 0;
+// uint32_t dword_CD8 = 0;
+// uint32_t dword_CDC = 0;
+// uint32_t dword_CE0 = 0;
+// uint32_t dword_CF8 = 0;
+// uint32_t dword_D00 = 0;
+// uint32_t dword_D04 = 0;
+// uint32_t dword_D08 = 0;
+// uint32_t dword_D20 = 0;
+// uint32_t dword_D28 = 0;
+// uint32_t dword_D2C = 0;
+// uint32_t dword_D30 = 0;
+// uint32_t dword_D34 = 0;
+// uint32_t dword_D38 = 0;
+// uint32_t dword_D48 = 0;
+// uint32_t dword_D4C = 0;
+// uint32_t dword_D58 = 0;
 
 // words definitions
 uint16_t word_314C0 = 0;
@@ -899,7 +899,7 @@ char unk_3D450[256] = "zte_tpd_log";
 char unk_3D4B9[256] = "zte_tpd_log";
 char unk_C50[256] = "zte_tpd_log";
 char unk_CA0[256] = "zte_tpd_log";
-char unk_D3C[256] = "zte_tpd_log";
+// char unk_D3C[256] = "zte_tpd_log";
 
 // Functions declarations for casting in structures
 extern __int64 __fastcall zte_touch_probe(__int64, __int64, __int64);
@@ -1005,6 +1005,12 @@ __int64 tpd_cdev = 0;
 int zte_touch_deinit_ztp_release = 0;
 __int64 p_device = 0;
 struct syna_hw_interface_layout syna_spi_hw_if;
+
+struct spi_device *syna_spi_dev_global = NULL;
+struct syna_hw_interface_layout *syna_board_data_global = NULL;
+void *syna_tcm_handle_global = NULL;
+void *zte_touch_dev_global = NULL;
+
 
 // Forward declarations for sysfs functions
 extern __int64 __fastcall syna_sysfs_info_show(__int64 a1, __int64 a2, __int64 a3);
@@ -1180,56 +1186,32 @@ struct bin_attribute fwimage_attr = {
 };
 
 // Panel name matching pointers
-const char *off_3E8 = "panel_3E8";
-const char *off_3F8 = "panel_3F8";
-const char *off_408 = "panel_408";
-const char *off_418 = "panel_418";
-const char *off_428 = "panel_428";
-const char *off_438 = "panel_438";
-const char *off_448 = "panel_448";
-const char *off_458 = "panel_458";
-const char *off_468 = "panel_468";
-const char *off_478 = "panel_478";
-const char *off_488 = "panel_488";
+const char off_3E8[] = "panel_3E8";
+const char off_3F8[] = "panel_3F8";
+const char off_408[] = "panel_408";
+const char off_418[] = "panel_418";
+const char off_428[] = "panel_428";
+const char off_438[] = "panel_438";
+const char off_448[] = "panel_448";
+const char off_458[] = "panel_458";
+const char off_468[] = "panel_468";
+const char off_478[] = "panel_478";
+const char off_488[] = "panel_488";
 
-const char *off_498 = "algo_498";
-const char *off_4A8 = "algo_4A8";
-const char *off_4B8 = "algo_4B8";
-const char *off_4C8 = "algo_4C8";
-const char *off_4D8 = "algo_4D8";
-const char *off_4E8 = "algo_4E8";
-const char *off_4F8 = "algo_4F8";
+const char off_498[] = "algo_498";
+const char off_4A8[] = "algo_4A8";
+const char off_4B8[] = "algo_4B8";
+const char off_4C8[] = "algo_4C8";
+const char off_4D8[] = "algo_4D8";
+const char off_4E8[] = "algo_4E8";
+const char off_4F8[] = "algo_4F8";
 
 uint8_t tp_ic_vendor_info_l = 0;
 uint8_t ztp_algo_info_l = 0;
 
-void *off_338 = (void *)gpio_free;
+void *off_338 = NULL;
 
-const char *off_42090[23] = {
-    "Bootloader",
-    "Application",
-    "MTP",
-    "Config",
-    "Display Config",
-    "Flash Config",
-    "Utility",
-    "Guest",
-    "Index",
-    "Properties",
-    "Testing",
-    "Custom",
-    "Unknown1",
-    "Unknown2",
-    "Unknown3",
-    "Unknown4",
-    "Unknown5",
-    "Unknown6",
-    "Unknown7",
-    "Unknown8",
-    "Unknown9",
-    "Unknown10",
-    "Unknown11"
-};
+
 
 char point_report_info[4096] = {0};
 

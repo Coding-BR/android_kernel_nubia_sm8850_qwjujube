@@ -147,6 +147,12 @@ void klist_add_behind(struct klist_node *n, struct klist_node *pos)
 {
 	struct klist *k = knode_klist(pos);
 
+	if (unlikely(!k)) {
+		pr_err("klist_add_behind: pos %pK has NULL klist\n", pos);
+		dump_stack();
+		return;
+	}
+
 	klist_node_init(k, n);
 	spin_lock(&k->k_lock);
 	list_add(&n->n_node, &pos->n_node);
@@ -162,6 +168,12 @@ EXPORT_SYMBOL_GPL(klist_add_behind);
 void klist_add_before(struct klist_node *n, struct klist_node *pos)
 {
 	struct klist *k = knode_klist(pos);
+
+	if (unlikely(!k)) {
+		pr_err("klist_add_before: pos %pK has NULL klist\n", pos);
+		dump_stack();
+		return;
+	}
 
 	klist_node_init(k, n);
 	spin_lock(&k->k_lock);
@@ -209,8 +221,15 @@ static int klist_dec_and_del(struct klist_node *n)
 static void klist_put(struct klist_node *n, bool kill)
 {
 	struct klist *k = knode_klist(n);
-	void (*put)(struct klist_node *) = k->put;
+	void (*put)(struct klist_node *) = NULL;
 
+	if (unlikely(!k)) {
+		pr_err("klist_put: node %pK has NULL klist\n", n);
+		dump_stack();
+		return;
+	}
+
+	put = k->put;
 	spin_lock(&k->k_lock);
 	if (kill)
 		knode_kill(n);

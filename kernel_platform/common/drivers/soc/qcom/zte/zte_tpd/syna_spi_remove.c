@@ -15,7 +15,7 @@ __int64 __fastcall syna_spi_remove(__int64 a1, __int64 a2, __int64 a3)
     result = gpio_free((unsigned int)dword_C80, a2);
   if ( rx_buf )
   {
-    if ( p_device && (v4 = *(_QWORD *)(p_device + 112)) != 0 )
+    if ( p_device && (v4 = syna_request_managed_device()) != 0 )
       result = devm_kfree(v4, rx_buf);
     else
       result = printk(unk_3BE43, "syna_pal_mem_free", a3);
@@ -23,7 +23,7 @@ __int64 __fastcall syna_spi_remove(__int64 a1, __int64 a2, __int64 a3)
   }
   if ( tx_buf )
   {
-    if ( p_device && (v5 = *(_QWORD *)(p_device + 112)) != 0 )
+    if ( p_device && (v5 = syna_request_managed_device()) != 0 )
       result = devm_kfree(v5, tx_buf);
     else
       result = printk(unk_3BE43, "syna_pal_mem_free", a3);
@@ -32,7 +32,7 @@ __int64 __fastcall syna_spi_remove(__int64 a1, __int64 a2, __int64 a3)
   v6 = xfer;
   if ( xfer )
   {
-    if ( p_device && (v7 = *(_QWORD *)(p_device + 112)) != 0 )
+    if ( p_device && (v7 = syna_request_managed_device()) != 0 )
       result = devm_kfree(v7, xfer);
     else
       result = printk(unk_3BE43, "syna_pal_mem_free", a3);

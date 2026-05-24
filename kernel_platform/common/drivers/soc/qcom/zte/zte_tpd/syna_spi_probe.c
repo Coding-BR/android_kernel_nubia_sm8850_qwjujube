@@ -80,7 +80,7 @@ __int64 __fastcall syna_spi_probe(__int64 a1, __int64 a2, __int64 a3)
 
   v80 = *(_QWORD *)(_ReadStatusReg(SP_EL0) + 1808);
   printk(unk_3BFC2, "syna_spi_probe", a3);
-  v4 = *(_QWORD *)(a1 + 744);
+  v4 = (__int64)((struct spi_device *)a1)->dev.of_node;
   v79 = 0;
   v77 = 0;
   v78 = 0;
@@ -220,9 +220,17 @@ __int64 __fastcall syna_spi_probe(__int64 a1, __int64 a2, __int64 a3)
   syna_ts_check_dt(a1);
   syna_spi_hw_if = a1;
   qword_BE8 = (__int64)&syna_spi_hw_if;
-  v37 = p_device;
-  *(_QWORD *)(p_device + 112) = a1;
-  *(_QWORD *)(v37 + 160) = &syna_spi_hw_if;
+  {
+    struct syna_hw_interface_layout *hw = (struct syna_hw_interface_layout *)&syna_spi_hw_if;
+    v37 = p_device;
+    syna_spi_dev_global = (struct spi_device *)a1;
+    syna_board_data_global = &syna_spi_hw_if;
+    hw->read = (void *)sub_1DAFC;
+    hw->write = (void *)sub_1DDE0;
+    hw->enable_irq = (void *)syna_spi_enable_irq;
+    hw->power_on = (void *)syna_spi_power_on;
+    hw->hw_reset = (void *)syna_spi_hw_reset;
+  }
   v38 = dword_D08;
   if ( !dword_D08 )
   {
@@ -246,7 +254,7 @@ __int64 __fastcall syna_spi_probe(__int64 a1, __int64 a2, __int64 a3)
       v41 = unk_33763;
       goto LABEL_161;
     }
-    v39 = devm_regulator_get(*(_QWORD *)(v37 + 112));
+    v39 = devm_regulator_get(&((struct platform_device *)p_device)->dev, qword_D10);
     if ( v39 >= 0xFFFFFFFFFFFFF001LL )
     {
       v40 = v39;
@@ -296,7 +304,7 @@ LABEL_226:
     v41 = unk_38E81;
     goto LABEL_161;
   }
-  v46 = devm_regulator_get(*(_QWORD *)(p_device + 112));
+  v46 = devm_regulator_get(&syna_spi_dev_global->dev, qword_CE8);
   if ( v46 >= 0xFFFFFFFFFFFFF001LL )
   {
     v47 = v46;
@@ -337,9 +345,9 @@ LABEL_214:
   }
   _mutex_init(unk_C50, "(struct mutex *)ptr", &syna_pal_mutex_alloc___key_1);
   v51 = dword_C40;
-  *(_BYTE *)(v50 + 940) = 8;
+  ((struct spi_device *)v50)->bits_per_word = 8;
   if ( v51 <= 3 )
-    *(_DWORD *)(v50 + 944) = v51;
+    ((struct spi_device *)v50)->mode = v51;
   v52 = spi_setup(v50);
   if ( (v52 & 0x80000000) != 0 )
   {
@@ -356,7 +364,7 @@ LABEL_214:
   }
   v56 = dword_C80;
   *v54 = 1022;
-  *(_QWORD *)(v50 + 960) = v54;
+  ((struct spi_device *)v50)->controller_data = v54;
   if ( v56 >= 1 )
   {
     v57 = syna_spi_get_gpio((unsigned int)v56, 1);
@@ -380,8 +388,8 @@ LABEL_214:
       result = v43;
       if ( rx_buf )
       {
-        if ( p_device && (v73 = *(_QWORD *)(p_device + 112)) != 0 )
-          devm_kfree(v73, rx_buf);
+        if ( syna_spi_dev_global && (v73 = (__int64)&syna_spi_dev_global->dev) != 0 )
+          devm_kfree((struct device *)v73, rx_buf);
         else
           printk(unk_3BE43, "syna_pal_mem_free", v72);
         result = v43;
@@ -389,8 +397,8 @@ LABEL_214:
       }
       if ( tx_buf )
       {
-        if ( p_device && (v74 = *(_QWORD *)(p_device + 112)) != 0 )
-          devm_kfree(v74, tx_buf);
+        if ( syna_spi_dev_global && (v74 = (__int64)&syna_spi_dev_global->dev) != 0 )
+          devm_kfree((struct device *)v74, tx_buf);
         else
           printk(unk_3BE43, "syna_pal_mem_free", v72);
         result = v43;
@@ -399,8 +407,8 @@ LABEL_214:
       v68 = xfer;
       if ( xfer )
       {
-        if ( p_device && (v75 = *(_QWORD *)(p_device + 112)) != 0 )
-          devm_kfree(v75, xfer);
+        if ( syna_spi_dev_global && (v75 = (__int64)&syna_spi_dev_global->dev) != 0 )
+          devm_kfree((struct device *)v75, xfer);
         else
           printk(unk_3BE43, "syna_pal_mem_free", v72);
         result = v43;
@@ -458,8 +466,8 @@ LABEL_192:
         gpio_free((unsigned int)dword_C80, v63);
       if ( rx_buf )
       {
-        if ( p_device && (v65 = *(_QWORD *)(p_device + 112)) != 0 )
-          devm_kfree(v65, rx_buf);
+        if ( syna_spi_dev_global && (v65 = (__int64)&syna_spi_dev_global->dev) != 0 )
+          devm_kfree((struct device *)v65, rx_buf);
         else
           printk(unk_3BE43, "syna_pal_mem_free", v64);
         rx_buf = 0;
@@ -467,8 +475,8 @@ LABEL_192:
       v66 = v61;
       if ( tx_buf )
       {
-        if ( p_device && (v67 = *(_QWORD *)(p_device + 112)) != 0 )
-          devm_kfree(v67, tx_buf);
+        if ( syna_spi_dev_global && (v67 = (__int64)&syna_spi_dev_global->dev) != 0 )
+          devm_kfree((struct device *)v67, tx_buf);
         else
           printk(unk_3BE43, "syna_pal_mem_free", v64);
         v66 = v61;
@@ -477,8 +485,8 @@ LABEL_192:
       v68 = xfer;
       if ( xfer )
       {
-        if ( p_device && (v69 = *(_QWORD *)(p_device + 112)) != 0 )
-          devm_kfree(v69, xfer);
+        if ( syna_spi_dev_global && (v69 = (__int64)&syna_spi_dev_global->dev) != 0 )
+          devm_kfree((struct device *)v69, xfer);
         else
           printk(unk_3BE43, "syna_pal_mem_free", v64);
         v66 = v61;

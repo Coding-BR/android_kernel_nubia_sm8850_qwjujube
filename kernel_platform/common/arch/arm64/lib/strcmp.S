@@ -54,6 +54,26 @@
 
 
 SYM_FUNC_START(__pi_strcmp)
+	/* Safety check for truncated src1 */
+	lsr	x2, x0, #32
+	cbnz	x2, .L_check_src2
+	cbz	x0, .L_check_src2
+	/* Restore truncated src1 */
+	adr	x2, .
+	lsr	x2, x2, #32
+	bfi	x0, x2, #32, #32
+
+.L_check_src2:
+	/* Safety check for truncated src2 */
+	lsr	x2, x1, #32
+	cbnz	x2, .L_strcmp_go
+	cbz	x1, .L_strcmp_go
+	/* Restore truncated src2 */
+	adr	x2, .
+	lsr	x2, x2, #32
+	bfi	x1, x2, #32, #32
+
+.L_strcmp_go:
 	sub	off2, src2, src1
 	mov	zeroones, REP8_01
 	and	tmp, src1, 7

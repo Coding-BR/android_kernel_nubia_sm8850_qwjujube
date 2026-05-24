@@ -190,6 +190,7 @@ LABEL_54:
     input_event(v35, 3, 58, v39);
   if ( v38 )
     input_event(v35, 3, 48, v38);
+  input_mt_sync_frame(v35);
   input_event(*((_QWORD *)v3 + 16), 0, 0, 0);
   *((_BYTE *)v3 + 84) = 1;
   printk(unk_35994, "edge_point_report", v5);

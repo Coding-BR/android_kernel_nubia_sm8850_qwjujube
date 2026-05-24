@@ -24,10 +24,6 @@ __int64 __fastcall syna_dev_set_up_input_device(__int64 a1)
   unsigned __int64 v38; // x9
   unsigned __int64 v41; // x9
   unsigned __int64 v44; // x9
-  struct device *managed_dev;
-  struct input_dev *input_dev;
-  struct platform_device *pdev;
-  struct device *parent;
 
   v1 = *(unsigned __int8 *)(*(_QWORD *)a1 + 9LL);
   if ( (_DWORD)v1 != 1 )
@@ -60,20 +56,21 @@ __int64 __fastcall syna_dev_set_up_input_device(__int64 a1)
     *(_QWORD *)(a1 + 944) = 0;
   }
   v7 = *(unsigned int **)a1;
-  managed_dev = (struct device *)syna_request_managed_device(v6);
-  if ( managed_dev )
+  if ( syna_request_managed_device(v6) )
   {
-    input_dev = devm_input_allocate_device(managed_dev);
-    if ( input_dev )
+    device = devm_input_allocate_device((struct device *)syna_request_managed_device(v6));
+    if ( device )
     {
-      v11 = (__int64)input_dev;
-      pdev = *(struct platform_device **)(a1 + 8);
-      parent = pdev ? &pdev->dev : managed_dev;
+      struct input_dev *input_dev = (struct input_dev *)device;
+      struct platform_device *pdev = *(struct platform_device **)(a1 + 8);
+      struct device *parent = pdev ? &pdev->dev : NULL;
 
+      v11 = device;
       input_dev->name = "synaptics_tcm_touch";
       input_dev->phys = "synaptics_tcm/touch_input";
       input_dev->id.bustype = 1;
       input_dev->id.vendor = 1;
+
       input_dev->dev.parent = parent;
       input_set_drvdata(input_dev, (void *)a1);
 
@@ -84,16 +81,17 @@ __int64 __fastcall syna_dev_set_up_input_device(__int64 a1)
       __set_bit(KEY_WAKEUP, input_dev->keybit);
       __set_bit(BTN_TOUCH, input_dev->keybit);
       __set_bit(BTN_TOOL_FINGER, input_dev->keybit);
-      input_set_capability(input_dev, EV_KEY, KEY_WAKEUP);
-      input_set_abs_params(input_dev, ABS_MT_POSITION_X, 0, v7[4], 0, 0);
-      input_set_abs_params(input_dev, ABS_MT_POSITION_Y, 0, v7[5], 0, 0);
-      input_mt_init_slots(input_dev, v7[6], INPUT_MT_DIRECT);
-      input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
-      input_set_abs_params(input_dev, ABS_MT_TOUCH_MINOR, 0, 255, 0, 0);
+
+      input_set_capability(device, 1, 143);
+      input_set_abs_params(input_dev, 53, 0, v7[4], 0, 0);
+      input_set_abs_params(input_dev, 54, 0, v7[5], 0, 0);
+      input_mt_init_slots(input_dev, v7[6], 2);
+      input_set_abs_params(input_dev, 48, 0, 255, 0, 0);
+      input_set_abs_params(input_dev, 49, 0, 255, 0, 0);
       *(_DWORD *)(a1 + 952) = v7[4];
       *(_DWORD *)(a1 + 956) = v7[5];
       *(_DWORD *)(a1 + 960) = v7[6];
-      v13 = input_register_device(v11);
+      v13 = input_register_device(input_dev);
       if ( (v13 & 0x80000000) == 0 )
       {
         v15 = *(unsigned int **)a1;

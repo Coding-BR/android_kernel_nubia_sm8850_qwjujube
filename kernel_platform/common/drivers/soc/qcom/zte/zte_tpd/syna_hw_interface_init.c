@@ -6,6 +6,7 @@ __int64 __fastcall syna_hw_interface_init(__int64 a1, __int64 a2, __int64 a3)
   void *v6; // x0
 
   printk(unk_348D8, "syna_hw_interface_init", a3);
+  syna_board_data_global = &syna_spi_hw_if;
   v3 = platform_device_register(&syna_spi_device);
   if ( (v3 & 0x80000000) != 0 )
   {

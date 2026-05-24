@@ -44,14 +44,15 @@ extern uint64_t qword_31700;
 extern uint64_t qword_31708;
 extern uint64_t qword_31710;
 extern uint64_t qword_BE8;
-extern uint64_t qword_BF4;
-extern uint64_t qword_C90;
-extern uint64_t qword_CE8;
-extern uint64_t qword_CF0;
-extern uint64_t qword_D10;
-extern uint64_t qword_D18;
-extern uint64_t qword_D40;
-extern uint64_t qword_D50;
+#define syna_spi_hw_if_ptr ((char *)&syna_spi_hw_if)
+#define qword_BF4 (*(uint64_t *)(syna_spi_hw_if_ptr + 20))
+#define qword_C90 (*(uint64_t *)(syna_spi_hw_if_ptr + 176))
+#define qword_CE8 (*(uint64_t *)(syna_spi_hw_if_ptr + 264))
+#define qword_CF0 (*(uint64_t *)(syna_spi_hw_if_ptr + 272))
+#define qword_D10 (*(uint64_t *)(syna_spi_hw_if_ptr + 304))
+#define qword_D18 (*(uint64_t *)(syna_spi_hw_if_ptr + 312))
+#define qword_D40 (*(uint64_t *)(syna_spi_hw_if_ptr + 352))
+#define qword_D50 (*(uint64_t *)(syna_spi_hw_if_ptr + 368))
 
 // dwords
 extern uint32_t dword_30EFF;
@@ -77,31 +78,31 @@ extern uint32_t dword_313CC;
 extern uint32_t dword_31428;
 struct completion;
 extern struct completion dword_314A0;
-extern uint32_t dword_C40;
-extern uint32_t dword_C44;
-extern uint32_t dword_C48;
-extern uint32_t dword_C80;
-extern uint32_t dword_C84;
-extern uint32_t dword_C88;
-extern uint32_t dword_C8C;
-extern uint32_t dword_CD0;
-extern uint32_t dword_CD4;
-extern uint32_t dword_CD8;
-extern uint32_t dword_CDC;
-extern uint32_t dword_CE0;
-extern uint32_t dword_CF8;
-extern uint32_t dword_D00;
-extern uint32_t dword_D04;
-extern uint32_t dword_D08;
-extern uint32_t dword_D20;
-extern uint32_t dword_D28;
-extern uint32_t dword_D2C;
-extern uint32_t dword_D30;
-extern uint32_t dword_D34;
-extern uint32_t dword_D38;
-extern uint32_t dword_D48;
-extern uint32_t dword_D4C;
-extern uint32_t dword_D58;
+#define dword_C40 (*(uint32_t *)(syna_spi_hw_if_ptr + 96))
+#define dword_C44 (*(uint32_t *)(syna_spi_hw_if_ptr + 100))
+#define dword_C48 (*(uint32_t *)(syna_spi_hw_if_ptr + 104))
+#define dword_C80 (*(uint32_t *)(syna_spi_hw_if_ptr + 160))
+#define dword_C84 (*(uint32_t *)(syna_spi_hw_if_ptr + 164))
+#define dword_C88 (*(uint32_t *)(syna_spi_hw_if_ptr + 168))
+#define dword_C8C (*(uint32_t *)(syna_spi_hw_if_ptr + 172))
+#define dword_CD0 (*(uint32_t *)(syna_spi_hw_if_ptr + 240))
+#define dword_CD4 (*(uint32_t *)(syna_spi_hw_if_ptr + 244))
+#define dword_CD8 (*(uint32_t *)(syna_spi_hw_if_ptr + 248))
+#define dword_CDC (*(uint32_t *)(syna_spi_hw_if_ptr + 252))
+#define dword_CE0 (*(uint32_t *)(syna_spi_hw_if_ptr + 256))
+#define dword_CF8 (*(uint32_t *)(syna_spi_hw_if_ptr + 280))
+#define dword_D00 (*(uint32_t *)(syna_spi_hw_if_ptr + 288))
+#define dword_D04 (*(uint32_t *)(syna_spi_hw_if_ptr + 292))
+#define dword_D08 (*(uint32_t *)(syna_spi_hw_if_ptr + 296))
+#define dword_D20 (*(uint32_t *)(syna_spi_hw_if_ptr + 320))
+#define dword_D28 (*(uint32_t *)(syna_spi_hw_if_ptr + 328))
+#define dword_D2C (*(uint32_t *)(syna_spi_hw_if_ptr + 332))
+#define dword_D30 (*(uint32_t *)(syna_spi_hw_if_ptr + 336))
+#define dword_D34 (*(uint32_t *)(syna_spi_hw_if_ptr + 340))
+#define dword_D38 (*(uint32_t *)(syna_spi_hw_if_ptr + 344))
+#define dword_D48 (*(uint32_t *)(syna_spi_hw_if_ptr + 360))
+#define dword_D4C (*(uint32_t *)(syna_spi_hw_if_ptr + 364))
+#define dword_D58 (*(uint32_t *)(syna_spi_hw_if_ptr + 376))
 
 // words
 extern uint16_t word_314C0;
@@ -900,7 +901,7 @@ extern char unk_3D450[];
 extern char unk_3D4B9[];
 extern char unk_C50[];
 extern char unk_CA0[];
-extern char unk_D3C[];
+#define unk_D3C ((uint32_t *)(syna_spi_hw_if_ptr + 348))
 
 extern __int64 tpd_cdev;
 extern int zte_touch_deinit_ztp_release;
@@ -923,6 +924,19 @@ extern struct syna_hw_interface_layout syna_spi_hw_if;
 #else
 extern __int64 syna_spi_hw_if;
 #endif
+
+struct spi_device;
+extern struct spi_device *syna_spi_dev_global;
+extern struct syna_hw_interface_layout *syna_board_data_global;
+extern void *syna_tcm_handle_global;
+extern void *zte_touch_dev_global;
+
+__int64 sub_1DAFC(unsigned int *a1, int a2);
+__int64 sub_1DDE0(unsigned int *a1, int a2);
+__int64 syna_spi_enable_irq(__int64 *a1, char a2, __int64 a3);
+__int64 syna_spi_power_on(__int64 a1, char a2);
+__int64 syna_spi_hw_reset(__int64 result);
+
 
 extern struct attribute_group attr_group;
 extern struct attribute_group attr_debug_group;
@@ -1038,31 +1052,30 @@ extern __int64 tp_test_write(__int64 a1, __int64 a2, __int64 a3);
 extern __int64 tp_frame_data_write(__int64 a1, __int64 a2, __int64 a3);
 
 // Panel and algorithm tables declarations
-extern const char *off_3E8;
-extern const char *off_3F8;
-extern const char *off_408;
-extern const char *off_418;
-extern const char *off_428;
-extern const char *off_438;
-extern const char *off_448;
-extern const char *off_458;
-extern const char *off_468;
-extern const char *off_478;
-extern const char *off_488;
+extern const char off_3E8[];
+extern const char off_3F8[];
+extern const char off_408[];
+extern const char off_418[];
+extern const char off_428[];
+extern const char off_438[];
+extern const char off_448[];
+extern const char off_458[];
+extern const char off_468[];
+extern const char off_478[];
+extern const char off_488[];
 
-extern const char *off_498;
-extern const char *off_4A8;
-extern const char *off_4B8;
-extern const char *off_4C8;
-extern const char *off_4D8;
-extern const char *off_4E8;
-extern const char *off_4F8;
+extern const char off_498[];
+extern const char off_4A8[];
+extern const char off_4B8[];
+extern const char off_4C8[];
+extern const char off_4D8[];
+extern const char off_4E8[];
+extern const char off_4F8[];
 
 extern uint8_t tp_ic_vendor_info_l;
 extern uint8_t ztp_algo_info_l;
 
 extern void *off_338;
-extern const char *off_42090[23];
 extern char point_report_info[4096];
 
 extern unsigned long syna_dev_probe__alloc_tag;

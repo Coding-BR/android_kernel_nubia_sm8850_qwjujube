@@ -11,7 +11,7 @@ __int64 __fastcall syna_dev_remove(__int64 a1, __int64 a2, __int64 a3)
   __int64 v11; // x2
   __int64 v12; // x0
 
-  v3 = *(_QWORD *)(a1 + 168);
+  v3 = (__int64)syna_tcm_handle_global;
   if ( !v3 )
     printk(unk_38D7D, "syna_dev_remove", a3);
   printk(unk_34878, "syna_dev_remove", a3);

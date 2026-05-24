@@ -30,7 +30,8 @@ __int64 __fastcall tpd_report_uevent(unsigned __int8 a1, __int64 a2, __int64 a3)
     v4 = "single_tap=true";
   }
   v6[0] = v4;
-  result = kobject_uevent_env(*(_QWORD *)(v3 + 3096) + 16LL, 2, v6);
+  struct platform_device *pdev = (struct platform_device *)*(_QWORD *)(v3 + 3096);
+  result = kobject_uevent_env(&pdev->dev.kobj, 2, v6);
 LABEL_9:
   _ReadStatusReg(SP_EL0);
   return result;

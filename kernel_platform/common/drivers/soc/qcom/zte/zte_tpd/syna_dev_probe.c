@@ -51,11 +51,11 @@ __int64 __fastcall syna_dev_probe(__int64 a1, __int64 a2, __int64 a3)
   v50 = *(_QWORD *)(_ReadStatusReg(SP_EL0) + 1808);
   v41[0] = 0;
   v4 = printk(unk_365DA, "syna_dev_probe", a3);
-  v6 = *(_QWORD *)(a1 + 160);
-  if ( !v6 )
+  v6 = (__int64)syna_board_data_global;
+  if ( !v6 || !*(_QWORD *)(v6 + 40) || !*(_QWORD *)(v6 + 48) )
   {
-    printk(unk_36FB5, "syna_dev_probe", v5);
-    result = 4294967274LL;
+    printk(unk_36FB5, "syna_dev_probe: board_data or read/write operations not ready, deferring probe\n");
+    result = 4294966779LL;
     goto LABEL_7;
   }
   v8 = syna_request_managed_device(v4);
@@ -141,9 +141,9 @@ LABEL_29:
     goto LABEL_13;
   }
   *(_QWORD *)(v12 + 1448) = 0;
-  *(_QWORD *)(a1 + 168) = v12;
-  device_set_wakeup_capable(a1 + 16, 1);
-  device_wakeup_enable(a1 + 16);
+  syna_tcm_handle_global = (void *)v12;
+  device_set_wakeup_capable(&((struct platform_device *)a1)->dev, 1);
+  device_wakeup_enable(&((struct platform_device *)a1)->dev);
   v28 = syna_dev_connect(v12, 0, 0);
   if ( (v28 & 0x80000000) != 0 )
   {

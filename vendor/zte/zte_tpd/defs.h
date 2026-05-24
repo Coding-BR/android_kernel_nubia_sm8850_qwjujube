@@ -164,6 +164,9 @@ typedef unsigned char _BYTE;
 #undef input_sync
 #define input_sync(dev) input_sync((struct input_dev *)(dev))
 
+#undef input_mt_sync_frame
+#define input_mt_sync_frame(dev) input_mt_sync_frame((struct input_dev *)(dev))
+
 // Custom copy_from_user wrapper declaration
 extern size_t inline_copy_from_user(__int64 a1, unsigned __int64 a2, size_t n);
 

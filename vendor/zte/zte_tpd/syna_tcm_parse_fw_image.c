@@ -25,58 +25,63 @@ static const size_t partition_name_lens[23] = {
     9, 15, 11, 8, 10, 12, 14, 13, 6, 6, 17, 4, 7, 4, 11, 4, 5, 17, 17, 17, 15, 21, 16
 };
 
-static const char *const partition_names[23] = {
-    "APP_CODE",
-    "APP_CODE_COPRO",
-    "APP_CONFIG",
-    "DISPLAY",
-    "BOOT_CODE",
-    "BOOT_CONFIG",
-    "APP_PROD_TEST",
-    "F35_APP_CODE",
-    "FORCE",
-    "GAMMA",
-    "TEMPERATURE_GAMMA",
-    "LCM",
-    "LOOKUP",
-    "OEM",
-    "OPEN_SHORT",
-    "OTP",
-    "PPDT",
-    "ROMBOOT_APP_CODE",
-    "TOOL_BOOT_CONFIG",
-    "JSON_CONFIG_AREA",
-    "CUSTOM_CS_AREA",
-    "CUSTOM_LOCKDOWN_AREA",
-    "CUSTOM_MTP_AREA"
-};
+static const char *get_partition_name(int idx) {
+    switch (idx) {
+        case 0: return "APP_CODE";
+        case 1: return "APP_CODE_COPRO";
+        case 2: return "APP_CONFIG";
+        case 3: return "DISPLAY";
+        case 4: return "BOOT_CODE";
+        case 5: return "BOOT_CONFIG";
+        case 6: return "APP_PROD_TEST";
+        case 7: return "F35_APP_CODE";
+        case 8: return "FORCE";
+        case 9: return "GAMMA";
+        case 10: return "TEMPERATURE_GAMMA";
+        case 11: return "LCM";
+        case 12: return "LOOKUP";
+        case 13: return "OEM";
+        case 14: return "OPEN_SHORT";
+        case 15: return "OTP";
+        case 16: return "PPDT";
+        case 17: return "ROMBOOT_APP_CODE";
+        case 18: return "TOOL_BOOT_CONFIG";
+        case 19: return "JSON_CONFIG_AREA";
+        case 20: return "CUSTOM_CS_AREA";
+        case 21: return "CUSTOM_LOCKDOWN_AREA";
+        case 22: return "CUSTOM_MTP_AREA";
+        default: return " ";
+    }
+}
 
-// Second names table for printing
-static const char *const partition_names_alt[23] = {
-    "APP_CODE",
-    "APP_CODE_COPRO",
-    "APP_CONFIG",
-    "DISPLAY",
-    "BOOT_CODE",
-    "BOOT_CONFIG",
-    "APP_PROD_TEST",
-    "F35_APP_CODE",
-    "FORCE",
-    "GAMMA",
-    "TEMPERATURE_GAMMA",
-    "LCM",
-    "LOOKUP",
-    "OEM",
-    "OPEN_SHORT",
-    "OTP",
-    "PPDT",
-    "ROMBOOT_APP_CODE",
-    "TOOL_BOOT_CONFIG",
-    " ", // Index 19 is " "
-    "CUSTOM_CS_AREA",
-    "CUSTOM_LOCKDOWN_AREA",
-    "CUSTOM_MTP_AREA"
-};
+static const char *get_partition_name_alt(int idx) {
+    switch (idx) {
+        case 0: return "APP_CODE";
+        case 1: return "APP_CODE_COPRO";
+        case 2: return "APP_CONFIG";
+        case 3: return "DISPLAY";
+        case 4: return "BOOT_CODE";
+        case 5: return "BOOT_CONFIG";
+        case 6: return "APP_PROD_TEST";
+        case 7: return "F35_APP_CODE";
+        case 8: return "FORCE";
+        case 9: return "GAMMA";
+        case 10: return "TEMPERATURE_GAMMA";
+        case 11: return "LCM";
+        case 12: return "LOOKUP";
+        case 13: return "OEM";
+        case 14: return "OPEN_SHORT";
+        case 15: return "OTP";
+        case 16: return "PPDT";
+        case 17: return "ROMBOOT_APP_CODE";
+        case 18: return "TOOL_BOOT_CONFIG";
+        case 19: return " ";
+        case 20: return "CUSTOM_CS_AREA";
+        case 21: return "CUSTOM_LOCKDOWN_AREA";
+        case 22: return "CUSTOM_MTP_AREA";
+        default: return " ";
+    }
+}
 
 __int64 __fastcall syna_tcm_parse_fw_image(__int64 a1, _QWORD a2, _QWORD *a3)
 {
@@ -139,7 +144,7 @@ __int64 __fastcall syna_tcm_parse_fw_image(__int64 a1, _QWORD a2, _QWORD *a3)
             partition_id = 0;
             for (j = 22; j >= -1; j--) {
                 if (j >= 0) {
-                    name = partition_names[j];
+                    name = get_partition_name(j);
                     len = strnlen(name, partition_name_lens[j]);
                 } else {
                     name = " ";
@@ -194,7 +199,7 @@ __int64 __fastcall syna_tcm_parse_fw_image(__int64 a1, _QWORD a2, _QWORD *a3)
             calculated_crc = ~crc32_le(~0U, data_ptr, size);
 
             if (file_checksum != calculated_crc) {
-                const char *err_name = (partition_id > 0 && partition_id <= 23) ? partition_names_alt[partition_id - 1] : " ";
+                const char *err_name = (partition_id > 0 && partition_id <= 23) ? get_partition_name_alt(partition_id - 1) : " ";
                 printk(KERN_ERR "%s: partition %s checksum error, image file: 0x%x (0x%x)\n",
                        "syna_tcm_save_flash_partition_data", err_name, file_checksum, calculated_crc);
                 continue;
@@ -209,7 +214,7 @@ __int64 __fastcall syna_tcm_parse_fw_image(__int64 a1, _QWORD a2, _QWORD *a3)
             parsed_info->partitions[partition_id].id = partition_id;
             parsed_info->partitions[partition_id].checksum = file_checksum;
 
-            const char *ok_name = (partition_id > 0 && partition_id <= 23) ? partition_names_alt[partition_id - 1] : " ";
+            const char *ok_name = (partition_id > 0 && partition_id <= 23) ? get_partition_name_alt(partition_id - 1) : " ";
             printk(KERN_INFO "%s: %s area - address:0x%08x (%d), size:%d\n",
                    "syna_tcm_save_flash_partition_data", ok_name, addr, addr, size);
         }
