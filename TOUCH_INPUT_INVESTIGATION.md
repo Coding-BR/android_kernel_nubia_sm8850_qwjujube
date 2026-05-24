@@ -33,6 +33,20 @@ sys-class-input.txt
 sys_boot_completed.txt
 ```
 
+Additional live-touch capture files:
+
+```text
+getevent-event9-live-touch.txt
+event9-live-touch-summary.txt
+```
+
+Status of live-touch capture:
+
+- A bounded 10-second `adb shell getevent -lt /dev/input/event9` capture was attempted.
+- Both live-touch output files were created, but no events were captured in that window.
+- Treat this as an incomplete capture, not as evidence that `event9` is inactive.
+- A manual rerun is still needed while physically touching/swiping the Android screen.
+
 Safe state during capture:
 
 ```text
@@ -47,6 +61,40 @@ Permission-limited captures:
 - `sys-class-input-find.txt` was empty from the unprivileged command
 
 No flashing, recovery reboot, boot image modification, kernel change, or recovery image build was performed for this capture.
+
+---
+
+## Android Touchscreen Identity
+
+Confirmed Android touchscreen identity:
+
+```text
+event node: /dev/input/event9
+name:       synaptics_tcm_touch
+location:   synaptics_tcm/touch_input
+sysfs path: /sys/devices/platform/soc/1ac0000.qcom,qupv3_4_geni_se/1a80000.spi/spi_master/spi19/spi19.0
+```
+
+Confirmed capabilities:
+
+```text
+ABS_MT_POSITION_X max 12159
+ABS_MT_POSITION_Y max 26879
+ABS_MT_SLOT       max 9
+INPUT_PROP_DIRECT
+```
+
+Android `dumpsys input` identity:
+
+```text
+Device 1: synaptics_tcm_touch
+Path: /dev/input/event9
+Sources: KEYBOARD | TOUCHSCREEN | TOUCH_MT
+```
+
+Important note:
+
+`dumpsys input` also showed `Touch Input Mapper (mode - DISABLED)` in the captured state. Document this as a state clue only. It does not override the stronger evidence that Android identifies the node as a direct multitouch touchscreen.
 
 ---
 
@@ -185,6 +233,16 @@ Touch-related vendor context paths present in the recovery ramdisk:
 /dev/hbtp_input
 ```
 
+Recovery-side comparison:
+
+| Question | Current Evidence | Interpretation |
+| --- | --- | --- |
+| Does recovery/minui scan all `/dev/input/event*` nodes? | `system/etc/ueventd.rc` creates generic `/dev/input/*` nodes with `0660 root input`; `system/bin/recovery` has no obvious hardcoded Synaptics event node name. | Stock recovery is most likely relying on generic evdev/minui scanning rather than a fixed `/dev/input/event9` path. |
+| Does recovery create permissions for Android's event node class? | `/dev/input/* 0660 root input` is present. | If the kernel publishes the node in recovery, ueventd should create a readable input node for recovery/minui, subject to process group/SELinux context. |
+| Does recovery reference `synaptics_tcm_touch` directly? | No direct ramdisk or recovery-binary reference was found. Recovery contexts reference older/platform paths such as `synaptics_tcm.0`, `zte_touch`, `/dev/v4l-touch*`, and `/dev/hbtp_input`. | Recovery probably does not require the exact Android input name, but the mismatch is worth tracking if a future recovery image loses touch. |
+| Could recovery fail even if the node exists? | Yes. Possible blockers include uevent timing, process permissions/group membership, SELinux labeling, minui filtering, or event classification. | Node existence alone will not prove recovery UI can consume touch. |
+| Is this more likely kernel/DTB, recovery userspace, or missing ramdisk config? | Stock recovery touch works, and Android sees `synaptics_tcm_touch` as generic evdev. | For stock-kernel recovery work, userspace/minui timing/filtering is currently more likely than a missing touchscreen driver. Kernel/DTB stays a risk only when moving away from stock recovery/kernel behavior. |
+
 `system/bin/recovery` string inspection:
 
 - no obvious `syna`, `synaptics`, `zte_tpd`, or touchscreen firmware filenames were found
@@ -201,14 +259,15 @@ Important interpretation:
 
 ## Hypotheses
 
-Most likely:
+Ranked hypotheses:
 
-1. Recovery/minui expects a normal evdev touchscreen and should work if `/dev/input/event9` or equivalent exists in recovery.
-2. The kernel/input driver path is `synaptics_tcm_touch`, location `synaptics_tcm/touch_input`.
-3. The Android working axis range is raw panel scale:
+1. Recovery/minui expects a normal evdev touchscreen and should work if `/dev/input/event9` or an equivalent `synaptics_tcm_touch` node exists in recovery with usable permissions.
+2. If touch fails in a modified recovery later, the first suspects should be event-node availability, uevent timing, minui filtering/classification, or permissions rather than the already-validated PNG/UI resource path.
+3. The Android working input path is `synaptics_tcm_touch` at `synaptics_tcm/touch_input`, backed by the SPI `spi19.0` sysfs path.
+4. The Android working axis range is raw panel scale:
    - X max: `12159`
    - Y max: `26879`
-4. Recovery touch problems are more likely to come from event-device availability/timing/mapping than from a missing recovery UI resource.
+5. Kernel/DTB driver initialization remains a separate risk only when changing the kernel/DTB path. It is not the next recovery-only change target because stock recovery touch already works.
 
 Possible issue classes to separate:
 
@@ -233,26 +292,35 @@ Do not build or flash a new image yet.
 
 Next safe step is a second Android-side evidence capture with active touch movement, so the event stream can be tied directly to `event9`.
 
-Suggested command, run while touching/dragging on the Android screen for a few seconds:
+Manual live-touch command, run while touching/dragging on the Android screen for 5-10 seconds:
 
 ```powershell
-adb shell getevent -lt /dev/input/event9 > C:\RM11-test\touch-input-evidence-001\getevent-event9-touch-sample.txt
+adb shell getevent -lt /dev/input/event9 > C:\RM11-test\touch-input-evidence-001\getevent-event9-live-touch.txt
 ```
 
 Stop the command with `Ctrl+C` after several touches.
 
-Then collect:
+Then create the filtered summary:
 
 ```powershell
-adb shell dumpsys input > C:\RM11-test\touch-input-evidence-001\dumpsys-input-after-touch.txt
-adb shell logcat -b all -d > C:\RM11-test\touch-input-evidence-001\logcat-all-after-touch.txt
+Select-String -Path C:\RM11-test\touch-input-evidence-001\getevent-event9-live-touch.txt -Pattern "ABS_MT_POSITION_X|ABS_MT_POSITION_Y|ABS_MT_SLOT|SYN_REPORT|BTN_TOUCH|ABS_X|ABS_Y" | Select-Object -First 120 > C:\RM11-test\touch-input-evidence-001\event9-live-touch-summary.txt
 ```
 
-Only after confirming event9 emits sane ABS_MT events should the next recovery-only plan be chosen.
+Expected proof in the summary:
+
+```text
+EV_ABS ABS_MT_SLOT
+EV_ABS ABS_MT_POSITION_X
+EV_ABS ABS_MT_POSITION_Y
+EV_SYN SYN_REPORT
+```
+
+Only after confirming `event9` emits sane live `ABS_MT` events should the next recovery-only plan be chosen.
 
 Potential later recovery-only diagnostic options, each requiring separate review:
 
 - add a non-invasive visual instruction page/resource for manual touch mapping
+- add a recovery-side touch test UI only if it can remain inside the recovery partition and avoid wipe/data paths
 - add a minimal recovery/minui property change only if rotation/mapping evidence supports it
 - add a recovery ramdisk config file only if stock recovery expects one and it is missing
 - avoid init services/actions until a specific missing runtime event or path is identified
