@@ -226,3 +226,16 @@ adb shell su -c "uname -a"                  # Versão do kernel
 ```bash
 python3 ~/.gemini/antigravity/brain/b4fcbd75-b4ec-4802-ab58-b97529611d28/scratch/check_ko_symbols.py
 ```
+
+## Local ABL Unlock Artifact
+
+A local ABL unlock research artifact is stored outside the git tree:
+
+`~/android/output/abl/abl_unlock.elf`
+
+This is intentionally not committed to the kernel repository. Keep it separate from:
+- safetyguard PR
+- zte_tpd touchscreen PR
+- recovery fastboot test images
+
+Do not flash blindly. Use only after confirming the exact ABL / partition workflow.
