@@ -1,11 +1,12 @@
 #!/bin/bash
+set -euo pipefail
 # super_build.sh - Compile the official ZTE kernel tree (in-tree)
 
 cd "$(dirname "$(readlink -f "$0")")"
 
 # Tools paths (can be overridden via environment variables)
 CLANG_DIR="${CLANG_DIR:-$(pwd)/clang-r536225}"
-PREBUILTS_DIR="${PREBUILTS_DIR:-/home/adrianojr59/Downloads/KernelNX809J/infinity_build/prebuilts/kernel-build-tools/linux-x86/bin}"
+PREBUILTS_DIR="${PREBUILTS_DIR:-$(pwd)/prebuilts/kernel-build-tools/linux-x86/bin}"
 
 if [ ! -d "$CLANG_DIR" ]; then
     echo "❌ Error: Clang compiler not found at $CLANG_DIR"
@@ -51,11 +52,12 @@ echo "⚙️ Appending custom configuration overrides..."
     echo '# CONFIG_ARM64_BTI_KERNEL is not set'
     echo 'CONFIG_UNWIND_TABLES=y'
     echo 'CONFIG_UNWIND_PATCH_PAC_INTO_SCS=y'
-    echo 'CONFIG_DEBUG_INFO=y'
-    echo '# CONFIG_DEBUG_INFO_NONE is not set'
-    echo 'CONFIG_DEBUG_INFO_DWARF5=y'
-    echo 'CONFIG_DEBUG_INFO_BTF=y'
-    echo 'CONFIG_DEBUG_INFO_BTF_MODULES=y'
+    echo '# CONFIG_DEBUG_INFO is not set'
+    echo 'CONFIG_DEBUG_INFO_NONE=y'
+    echo '# CONFIG_DEBUG_INFO_DWARF5 is not set'
+    echo '# CONFIG_DEBUG_INFO_BTF is not set'
+    echo '# CONFIG_DEBUG_INFO_BTF_MODULES is not set'
+    echo '# CONFIG_GENDWARFKSYMS is not set'
     echo 'CONFIG_SCHED_CLASS_EXT=y'
     echo 'CONFIG_EXT_GROUP_SCHED=y'
     echo 'CONFIG_LSM="landlock,lockdown,yama,loadpin,safesetid,selinux,smack,tomoyo,apparmor,ipe,bpf"'
