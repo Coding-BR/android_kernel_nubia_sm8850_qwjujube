@@ -332,3 +332,46 @@ Interpretation:
 Rule:
 - use only `fastboot boot`.
 - do not flash this image.
+
+## Stock Kernel Isolation Test Result
+
+Tested image:
+
+```text
+C:\RM11-test\recovery\rm11-stock-kernel-recovery-ramdisk-fastboot.img
+```
+
+Composition:
+- stock E: ROM kernel
+- stock E: ROM kernel DTB
+- stock E: ROM recovery ramdisk
+
+Observed result:
+- `fastboot boot` succeeded at transport/bootloader level.
+- device booted Android, not recovery.
+
+Conclusion:
+- Android-vs-recovery routing is not caused by the rebuilt kernel or rebuilt DTB.
+- Even stock kernel/DTB with stock recovery ramdisk enters Android when launched through `fastboot boot`.
+- Stock recovery only enters recovery through `adb reboot recovery` / bootloader recovery handoff.
+
+Additional clue from Android-side capture:
+- after `fastboot boot`, Android still reports stock on-disk `init_boot` and `vendor_boot` vbmeta digests.
+- `/proc/cmdline` and `/proc/bootconfig` are permission denied without root.
+- `misc` is visible as `/dev/block/by-name/misc -> /dev/block/sda3`, but raw BCB reads are not available without root/EDL.
+
+Current technical model:
+- `fastboot boot` supplies a temporary boot image but still leaves the device in normal boot context.
+- normal boot context loads or honors the on-disk `init_boot` / `vendor_boot` / bootconfig path.
+- the recovery ramdisk alone is insufficient unless the bootloader also performs the recovery handoff.
+
+Next focus:
+- BCB / `misc` recovery command behavior
+- bootloader recovery handoff
+- `init_boot` and `vendor_boot` first-stage behavior
+- whether custom recovery testing must move from `fastboot boot` to controlled recovery-partition replacement with stock-image restore ready
+
+Avoid:
+- more random `androidboot.*=recovery` cmdline images
+- slot-B boot flashing for this loop
+- any wipe/data-affecting recovery menu action

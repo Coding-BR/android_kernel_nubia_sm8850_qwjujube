@@ -163,6 +163,19 @@ Critérios de decisão:
 
 Regra obrigatória: esta imagem é somente para `fastboot boot`. Não usar `fastboot flash` neste estágio.
 
+#### Resultado físico: `fastboot boot` não seleciona recovery
+
+O teste físico mostrou que a imagem temporária com kernel/DTB customizados + ramdisk stock de recovery inicia Android, não recovery. Um teste de isolamento com kernel stock + DTB stock + ramdisk stock de recovery também iniciou Android:
+
+```text
+C:\RM11-test\recovery\rm11-stock-kernel-recovery-ramdisk-fastboot.img
+SHA-256: ebe6bb82c4c6ab90bacb7b54cceb9486aaf25d69dd54657ceeda76aebbda5d06
+```
+
+Conclusão: neste aparelho, `fastboot boot` valida que a imagem é carregável pelo bootloader, mas não reproduz o handoff de recovery. A seleção real de recovery depende do caminho `adb reboot recovery` / bootloader recovery, BCB em `misc`, bootconfig e/ou comportamento de `init_boot`/`vendor_boot`.
+
+Nova regra: não criar mais imagens com flags aleatórias `androidboot.*=recovery`. Uma tentativa com `androidboot.mode=recovery` e `androidboot.bootmode=recovery` causou CrashDump.
+
 ---
 
 ### Estratégia 2: Flash Físico na partição de Módulos (`vendor_dlkm`)
