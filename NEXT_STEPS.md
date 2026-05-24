@@ -239,3 +239,22 @@ This is intentionally not committed to the kernel repository. Keep it separate f
 - recovery fastboot test images
 
 Do not flash blindly. Use only after confirming the exact ABL / partition workflow.
+
+## Fastboot Boot Retest Result
+
+After reflashing the local ABL unlock artifact and restoring the device to safe slot A state, `fastboot boot` behavior changed.
+
+Previous result:
+- `fastboot boot` failed with `remote: unknown command`
+
+Current result:
+- `fastboot boot C:\RM11-test\recovery\rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img` sends and boots the image successfully
+- the device returns through ADB as Android `device`, not `recovery`
+- captured result shows `ro.boot.slot_suffix` as `_a`
+- captured result shows `ro.bootmode` as `unknown`
+
+Conclusion:
+- fastboot temporary boot is now available
+- the current recovery test image boots Android instead of recovery
+- next work is recovery image construction/routing: bootconfig, cmdline, init_boot, vendor_boot, and recovery ramdisk behavior
+- no further slot-B flashing is needed for this specific loop while `fastboot boot` works
