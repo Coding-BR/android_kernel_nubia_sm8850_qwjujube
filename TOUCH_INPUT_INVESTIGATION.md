@@ -428,3 +428,139 @@ Hard restrictions:
 - no wipe/data changes
 - no risky init services/actions
 - recovery partition only remains the safe lane
+
+---
+
+## Recovery Runtime Observation Plan
+
+Main runtime question:
+
+```text
+When booted into recovery, does the Synaptics touch input node exist at all?
+If yes, what event number/name does it get, and does recovery/minui open it?
+```
+
+This is now the highest-value question. Android has already proven that the live touchscreen stream is `/dev/input/event9` with name `synaptics_tcm_touch`, but static recovery inspection cannot prove the recovery runtime node list.
+
+### Path A: Stock Recovery UI/Log Observation
+
+Goal: gather any stock recovery logs without modifying recovery.
+
+Test outline:
+
+1. Boot the currently validated stock or marker recovery through the normal recovery path.
+2. Use the recovery UI only.
+3. Open `Advanced options`.
+4. Open `View recovery logs`.
+5. Search visually for input/minui/evdev/touch/open errors.
+6. Photograph the log screen if export is unavailable.
+
+Search terms to look for in the UI/log view:
+
+```text
+minui
+evdev
+input
+touch
+synaptics
+tcm
+event
+/dev/input
+open
+permission
+```
+
+Expected value:
+
+- If stock recovery logs show minui input enumeration, this may answer whether recovery sees the touch node without any image change.
+- If logs cannot be exported because recovery ADB is unauthorized, a clear photo is still useful.
+
+Limitations:
+
+- The built-in log viewer may not include early input enumeration.
+- The log viewer may not expose `/tmp/recovery.log` or kernel logs in enough detail.
+- This path may prove only that touch works, not which event node minui opened.
+
+Risk:
+
+- Very low. No flashing, no image modification, no wipe/data operation.
+- Hard warning: do not choose wipe/data options.
+
+### Path B: Passive Recovery Ramdisk Input Logger
+
+Goal: after review only, add a minimal passive diagnostic that records recovery-runtime input discovery without changing UI behavior or touch behavior.
+
+Candidate diagnostic contents:
+
+```sh
+date
+ls -l /dev/input
+getevent -lp
+cat /proc/bus/input/devices
+dmesg | grep -Ei "synaptics|touch|input|tcm|spi19|v4l|v41|hbtp|zte"
+logcat -b all -d | grep -Ei "minui|evdev|input|touch|synaptics|tcm"
+```
+
+Static availability in the stock recovery ramdisk:
+
+- `sh` exists.
+- `toybox` exists with common utilities such as `cat`, `ls`, `grep`, `find`, `dmesg`, `sleep`, `tee`, and `date`.
+- `getevent` exists as a toolbox applet link.
+- `logcat` was not confirmed as a present binary in the extracted stock recovery ramdisk, so `logcat` must be treated as optional unless verified at build time.
+
+Potential writable targets:
+
+| Target | Static Evidence | Usefulness | Risk/Limit |
+| --- | --- | --- | --- |
+| `/tmp/` | `init.rc` mounts tmpfs at `/tmp`, sets owner `root:shell`, mode `0775`. | Safest runtime scratch target. | Volatile; lost after reboot unless recovery UI/log collection copies it. |
+| `/cache/recovery/` | File contexts exist for `/cache/recovery`; `init.rc` creates `/cache`, but no stock recovery fstab cache mount was identified. | Traditional recovery log location if mounted/used by recovery. | Runtime writability is unproven; writing here must not be assumed safe until tested carefully. |
+| `/dev/kmsg` | File context exists; health recovery service has `file /dev/kmsg w`. | A short diagnostic line may enter kernel log. | Android-side retrieval is not guaranteed without root; pstore should not be treated as available unless a crash/panic preserves it. |
+| `/sys/fs/pstore` | No safe write path; Android-side pstore was permission-limited earlier. | Not suitable as a planned output target. | Do not write here. |
+
+Existing init/service pattern:
+
+- `system/etc/init/hw/init.rc` starts `ueventd` in `early-init`, mounts `/tmp` during `on init`, and starts the normal `recovery` service as root with `seclabel u:r:recovery:s0`.
+- `init.recovery.qcom.rc` uses simple `on init`, property, and `on fs` actions.
+- Existing recovery services are long-running platform services (`recovery`, `adbd`, `fastbootd`, health HAL), not small custom oneshot shell diagnostics.
+
+Conservative conclusion:
+
+- There is no existing tiny diagnostic shell service pattern to copy directly.
+- If Path B is approved later, the safest form is likely a disabled or oneshot root shell service/action that writes only to `/tmp/rm11-input-diag.txt` and optionally one short `/dev/kmsg` marker.
+- Do not write to `/cache/recovery` until the recovery log destination and mount behavior are better understood.
+- Do not add init actions/services without a separate reviewed plan.
+
+Questions answered before building:
+
+1. Existing service pattern: recovery has service definitions and init actions, but no tiny passive shell diagnostic pattern. A oneshot diagnostic would be new and must be reviewed.
+2. `/cache/recovery` writability: not proven statically. Contexts exist, but the extracted recovery fstab does not show a dedicated cache mount. Treat as unproven.
+3. Passive log file safety: writing to `/tmp` is safest and should not trigger wipe/update behavior. Writing to `/cache/recovery` could interact with recovery log handling and needs more caution.
+4. Commands to log: `ls -l /dev/input`, `getevent -lp`, `cat /proc/bus/input/devices`, and filtered `dmesg` are plausible from available recovery tools. `logcat` is optional/unproven.
+5. `/dev/kmsg`: possible for a short marker line, but Android retrieval after reboot is not guaranteed without root/pstore access.
+
+Least invasive recommendation:
+
+1. Run Path A first using stock/marker recovery UI logs and photos.
+2. If Path A does not reveal runtime input enumeration, design Path B as a reviewed recovery-only diagnostic image.
+3. Path B should initially write only to `/tmp/rm11-input-diag.txt` and a short `/dev/kmsg` marker, then rely on the recovery UI/log viewer or a photograph if ADB remains unauthorized.
+4. Do not build Path B until the exact init hook, output target, and rollback steps are reviewed.
+
+Rollback for any future Path B image:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+Hard restrictions for this phase:
+
+- no image build yet
+- no flashing
+- no recovery modification
+- no kernel/DTB work
+- no boot/vendor_boot/init_boot/vbmeta work
+- no wipe/data changes
+- no fastboot boot recovery tests
