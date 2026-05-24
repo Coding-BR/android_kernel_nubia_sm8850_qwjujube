@@ -856,12 +856,86 @@ adb shell getprop sys.boot_completed
 adb reboot recovery
 ```
 
+Physical validation result: PASS with layout issue.
+
+- recovery booted after flashing `rm11-recovery-marker-003-visible-title.img`
+- UI displayed the modified title resource, proving recovery loaded the modified ramdisk resource
+- text was partially cropped/off-fit on the device
+- menu still worked
+- no CrashDump
+- no FTM
+- no black screen
+
+Conclusion:
+
+- the first visible functional recovery-only change succeeded
+- the only issue was PNG layout/fit
+- marker-004 should correct only `res/images/recovery_en.png`
+
+Marker-004 corrected title build:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-004-visible-title-fit.img
+/home/richtofen/android/output/recovery/rm11-recovery-marker-004-visible-title-fit.img
+SHA-256: 8A3EC1C867DEAD100E665C2B64AFABB8FDF81504467689A5BFA13830315274AC
+```
+
+Preview PNG:
+
+```text
+C:\RM11-test\recovery\marker-004-recovery_en.png
+```
+
+Only changed ramdisk resource:
+
+```text
+res/images/recovery_en.png
+```
+
+Generated PNG verification:
+
+```text
+dimensions: 880 x 224
+mode:       indexed palette PNG
+visible:    Recovery 004
+layout:     smaller centered text with wide margins
+```
+
+Image header verification:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20457088]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Size verification:
+
+```text
+image size:      104857600 bytes
+partition size:  0x6400000 = 104857600 bytes
+```
+
+Marker-004 flash commands:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-004-visible-title-fit.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-004-visible-title-fit.img
+fastboot --set-active=a
+fastboot reboot
+```
+
 Pass criteria for the first functional image:
 
 - Android still boots after flashing recovery partitions
 - `adb reboot recovery` still reaches recovery
 - recovery UI/display/touch still work
-- recovery title visibly reads `Recovery 003`
+- recovery title visibly reads `Recovery 004` and fits cleanly
 - no CrashDump
 - no FTM
 - no black screen

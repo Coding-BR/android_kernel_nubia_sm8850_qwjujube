@@ -788,6 +788,62 @@ fastboot --set-active=a
 fastboot reboot
 ```
 
+Physical validation result: PASS with layout issue.
+
+- recovery booted after flashing marker-003
+- UI displayed the modified title resource, proving the modified recovery ramdisk resource loaded
+- text was partially cropped/off-fit on device
+- menu still worked
+- no CrashDump
+- no FTM
+- no black screen
+
+## Marker 004 Corrected Visible Title
+
+Built from the known-good stock/repacked recovery baseline, changing only:
+
+```text
+res/images/recovery_en.png
+```
+
+Output:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-004-visible-title-fit.img
+SHA-256: 8A3EC1C867DEAD100E665C2B64AFABB8FDF81504467689A5BFA13830315274AC
+```
+
+Preview PNG:
+
+```text
+C:\RM11-test\recovery\marker-004-recovery_en.png
+```
+
+Header:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20457088]
+RAMDISK_FMT     [lz4_legacy]
+```
+
+Size:
+
+```text
+104857600 bytes = 0x6400000
+```
+
+Flash commands:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-004-visible-title-fit.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-004-visible-title-fit.img
+fastboot --set-active=a
+fastboot reboot
+```
+
 Rollback:
 
 ```powershell
