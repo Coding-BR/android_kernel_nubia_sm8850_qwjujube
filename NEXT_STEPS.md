@@ -529,8 +529,47 @@ Recovery boot command sent:
 adb reboot recovery
 ```
 
-Manual validation pending on device screen:
-- recovery UI
-- display
-- touch
+Manual validation result: PASS.
+- recovery UI appeared
+- display worked
+- touch worked
+- no CrashDump
+- no FTM
+- no black screen
 - no wipe
+- recovery ADB stayed unauthorized, matching stock recovery behavior
+
+Runtime visibility:
+- expected runtime marker path is `/etc/rm11_recovery_marker.txt`
+- direct runtime marker verification is blocked because recovery ADB is unauthorized
+- marker-001 still passes as a safe recovery partition and ramdisk modification test
+
+## Marker 002 Recommendation
+
+Do not build marker-002 as a behavior-changing image yet. The safest next marker should remain static:
+
+- add `system/etc/rm11_recovery_marker_002.txt`
+- optionally add one comment to `init.recovery.qcom.rc`
+- do not add init actions
+- do not add services
+- do not change recovery properties
+- do not change recovery UI resources yet
+- do not modify boot, vendor_boot, init_boot, vbmeta, or slots
+- do not use `fastboot boot` for recovery validation
+- do not use any force-recovery cmdline image
+
+Recommended marker-002 purpose:
+
+```text
+static ramdisk verification only
+```
+
+Reasoning:
+- marker-001 already proved a modified recovery ramdisk can boot through the recovery partitions
+- stock recovery ADB authorization is the blocker for reading the marker at runtime
+- adding a log-writing action or property before solving visibility would add risk without guaranteeing useful evidence
+
+Next useful investigation:
+- determine whether stock recovery `View recovery logs` exposes enough detail for marker verification
+- determine whether recovery ADB authorization can be made available without changing recovery behavior
+- only after one of those works, consider a runtime marker under `/tmp` or another recovery-safe path

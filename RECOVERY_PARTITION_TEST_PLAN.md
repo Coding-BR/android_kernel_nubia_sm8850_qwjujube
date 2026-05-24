@@ -474,20 +474,92 @@ Recovery boot command sent:
 adb reboot recovery
 ```
 
-Manual validation pending:
+Manual validation result: PASS.
 
-- recovery UI appears
-- display works
-- touch works
+- recovery UI appeared
+- display worked
+- touch worked
 - no CrashDump
 - no FTM
+- no black screen
 - no wipe
+- recovery ADB appeared unauthorized, matching stock recovery behavior
 
 Artifacts/logs:
 
 ```text
 C:\RM11-test\recovery-marker-001-flash
 ```
+
+Runtime marker visibility status:
+
+- the marker is present in the built image at `system/etc/rm11_recovery_marker.txt`
+- runtime path should be `/etc/rm11_recovery_marker.txt` because stock recovery has `/etc -> /system/etc`
+- recovery ADB remains unauthorized, so direct runtime file verification is not available yet
+- marker-001 still passes as a recovery partition safety test because the modified ramdisk boots stock recovery behavior cleanly
+
+---
+
+## Marker 002 Recommendation
+
+Inspection of the stock recovery ramdisk found a very small `init.recovery.qcom.rc`:
+
+```text
+on init
+    write /sys/class/backlight/panel0-backlight/brightness 200
+    setprop sys.usb.configfs 1
+
+on property:ro.boot.usbcontroller=*
+    setprop sys.usb.controller ${ro.boot.usbcontroller}
+    wait /sys/bus/platform/devices/${ro.boot.usb.dwc3_msm:-a600000.ssusb}/mode
+    write /sys/bus/platform/devices/${ro.boot.usb.dwc3_msm:-a600000.ssusb}/mode peripheral
+    wait /sys/class/udc/${ro.boot.usbcontroller} 1
+
+on fs
+    wait /dev/block/platform/soc/${ro.boot.bootdevice}
+    symlink /dev/block/platform/soc/${ro.boot.bootdevice} /dev/block/bootdevice
+```
+
+Useful stock recovery facts:
+
+- `/etc` is a symlink to `/system/etc`
+- `system/bin/recovery`, `system/bin/minadbd`, `system/bin/logcat`, `system/bin/sh`, `toybox`, and `toolbox` exist
+- recovery file contexts include `/tmp`, `/cache/recovery`, and `/data/misc/recovery`
+- there is no obvious existing script that prints arbitrary marker files into visible recovery logs
+
+Recommended marker-002 method:
+
+1. Keep the marker static and harmless.
+2. Add `system/etc/rm11_recovery_marker_002.txt`.
+3. Add only a comment to `init.recovery.qcom.rc`, for static unpacked-image verification.
+4. Do not add init actions, services, property changes, UI changes, or log-writing behavior yet.
+
+Suggested marker-002 content:
+
+```text
+RM11 recovery ramdisk marker test 002
+purpose=static marker only
+source=rm11-repacked-stock-recovery.img
+```
+
+Suggested `init.recovery.qcom.rc` comment:
+
+```text
+# RM11 recovery marker 002: static ramdisk verification only.
+```
+
+Reasoning:
+
+- marker-001 already proves recovery partition replacement can boot safely with a ramdisk-only change
+- recovery ADB authorization is still the blocker for direct runtime file reads
+- adding an init `exec`, `write`, property, service, or UI-visible mutation would increase behavioral risk before it gives a reliable verification path
+- the next useful test should stay static unless recovery logs or authorized recovery ADB become available
+
+Optional later runtime visibility path, after marker-002 static validation:
+
+- solve recovery ADB authorization, then read `/etc/rm11_recovery_marker_002.txt`
+- or use stock recovery `View recovery logs` if it can expose a controlled marker without changing init behavior
+- only after that consider a low-risk runtime marker such as writing a file under `/tmp`; do not do this in marker-002
 
 ---
 
