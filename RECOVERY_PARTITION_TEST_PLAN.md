@@ -8,6 +8,41 @@ Purpose: define the safest controlled path for validating recovery partition wri
 
 ---
 
+## Current Project Synopsis
+
+The RM11 Pro / NX809J now has a validated recovery-partition development loop.
+
+Verified results:
+
+- ABL unlock/restoration enabled working fastboot commands.
+- `fastboot boot` is not a valid recovery-mode validation path on this device.
+- Stock recovery boots through `adb reboot recovery`.
+- Stock recovery display and touch work.
+- Recovery ADB remains unauthorized, matching stock recovery behavior.
+- `recovery_a` and `recovery_b` can be flashed safely.
+- Byte-identical repacked stock recovery flashed to both recovery slots and still booted Android/recovery.
+- marker-001 and marker-002 static ramdisk modifications passed.
+- marker-003 visibly proved recovery loads modified ramdisk resources, but the title fit was imperfect.
+- marker-004 displayed `Recovery 004` cleanly and passed physically.
+
+Current conclusion:
+
+- recovery partition workflow is validated
+- modified recovery ramdisk resources execute on-device
+- do not use `fastboot boot` for recovery validation
+- current safe lane is `recovery_a` / `recovery_b` only
+- rollback image remains `C:\RM11-test\recovery\rm11-repacked-stock-recovery.img`
+
+Hard restrictions:
+
+- no `fastboot boot` recovery tests
+- no force-recovery cmdline images
+- no `boot`, `vendor_boot`, `init_boot`, or `vbmeta` work
+- no wipe/data behavior changes
+- no services/init actions unless separately reviewed
+
+---
+
 ## Current Model
 
 - `fastboot boot` is available after the ABL unlock/restoration work.
@@ -1000,6 +1035,12 @@ Recommended marker-005 file:
 res/images/button_normal.png
 ```
 
+Planned output image:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-005.img
+```
+
 Expected visual result:
 
 - keep the stock `928 x 160` button background
@@ -1016,12 +1057,28 @@ Why this is safe:
 - it does not alter init actions, services, USB, ADB, mounts, boot control, wipe behavior, or partition routing
 - it should be visible immediately on the recovery menu without authorized recovery ADB
 
+Build plan:
+
+1. Start from `C:\RM11-test\recovery\rm11-repacked-stock-recovery.img`.
+2. Unpack the ramdisk.
+3. Extract `res/images/button_normal.png`.
+4. Add a tiny lower-right marker while preserving:
+   - dimensions: `928 x 160`
+   - PNG format
+   - center/label area
+   - stock border and background
+5. Repack as a ramdisk-only recovery image.
+6. Copy output to `C:\RM11-test\recovery\rm11-recovery-marker-005.img`.
+7. Record SHA-256 after build.
+
 Marker-005 image requirements:
 
 ```text
 HEADER_VER      [4]
 KERNEL_SZ       [0]
+RAMDISK_SZ      nonzero
 RAMDISK_FMT     [lz4_legacy]
+image size      <= 0x6400000
 ```
 
 Keep unchanged:
@@ -1039,12 +1096,34 @@ Keep unchanged:
 
 Observation method:
 
-1. Flash the marker-005 image to `recovery_a` and `recovery_b` only.
-2. Reboot Android and confirm slot/state.
-3. Run `adb reboot recovery`.
-4. On the main recovery menu, check whether unselected button backgrounds show the small lower-right marker.
-5. Confirm the title remains clean and the menu text is not obstructed.
-6. Do not enter wipe flows.
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb reboot bootloader
+
+fastboot devices
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-005.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-005.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+After Android boots:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb reboot recovery
+```
+
+On the main recovery menu:
+
+- check whether unselected button backgrounds show the small lower-right marker
+- confirm the title remains clean
+- confirm menu text is not obstructed
+- do not enter wipe flows
 
 Pass criteria:
 
@@ -1057,6 +1136,7 @@ Pass criteria:
 - no CrashDump
 - no FTM
 - no black screen
+- `Reboot system` returns Android
 - no wipe/data change
 
 Fail criteria:

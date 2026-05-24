@@ -5,6 +5,39 @@
 
 ---
 
+## Current Project Synopsis
+
+The RM11 Pro / NX809J recovery development loop is now validated. ABL unlock/restoration enabled working fastboot commands, but `fastboot boot` is not a valid recovery-mode validation path on this device: even stock kernel/DTB plus stock recovery ramdisk routes into Android when launched that way.
+
+The safe lane is recovery partition work only:
+
+- stock recovery boots through `adb reboot recovery`
+- stock recovery display and touch work
+- recovery ADB remains unauthorized, matching stock recovery behavior
+- `recovery_a` and `recovery_b` can be flashed and rolled back safely
+- byte-identical repacked stock recovery flashed to both recovery slots and still booted Android/recovery
+- marker-001 and marker-002 proved static ramdisk modifications are tolerated
+- marker-003 proved recovery loads modified ramdisk PNG resources on-device
+- marker-004 fixed the visible title fit and passed physically
+
+Current conclusion:
+
+- recovery partition workflow is validated
+- modified recovery ramdisk resources execute on-device
+- do not use `fastboot boot` for recovery validation
+- current safe lane is `recovery_a` / `recovery_b` only
+- rollback image remains `C:\RM11-test\recovery\rm11-repacked-stock-recovery.img`
+
+Hard restrictions:
+
+- no `fastboot boot` recovery tests
+- no force-recovery cmdline images
+- no `boot`, `vendor_boot`, `init_boot`, or `vbmeta` work
+- no wipe/data behavior changes
+- no services/init actions unless separately reviewed
+
+---
+
 ## Estado Atual — O Que Já Está Pronto
 
 ### Techpacks Compilados (9/9 disponíveis) — 49 módulos .ko ✅
@@ -879,6 +912,12 @@ Recommended file:
 res/images/button_normal.png
 ```
 
+Planned output:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-005.img
+```
+
 Expected visual result:
 - keep the stock `928 x 160` button background
 - add a tiny `RM11` or `005` mark in the lower-right corner inside the border
@@ -894,6 +933,41 @@ Why this is safe:
 - no wipe/data behavior change
 - visible on the main recovery menu without authorized recovery ADB
 
+Build requirements:
+- start from `C:\RM11-test\recovery\rm11-repacked-stock-recovery.img`
+- change only `res/images/button_normal.png`
+- preserve `928 x 160` dimensions
+- record SHA-256 once built
+- verify `HEADER_VER [4]`
+- verify `KERNEL_SZ [0]`
+- verify `RAMDISK_SZ` is nonzero
+- verify `RAMDISK_FMT [lz4_legacy]`
+- verify image size is `<= 0x6400000`
+
+Physical test sequence:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb reboot bootloader
+
+fastboot devices
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-005.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-005.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+After Android boots:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb reboot recovery
+```
+
 Pass criteria:
 - Android boots after flashing recovery partitions
 - slot remains `_a`
@@ -906,6 +980,7 @@ Pass criteria:
 - no CrashDump
 - no FTM
 - no black screen
+- `Reboot system` returns Android
 - no wipe
 
 Rollback:

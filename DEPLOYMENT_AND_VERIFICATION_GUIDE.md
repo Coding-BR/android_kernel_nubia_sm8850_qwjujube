@@ -4,6 +4,37 @@ Este guia estabelece o padrão obrigatório de qualidade e segurança para teste
 
 ---
 
+## Current Project Synopsis
+
+The RM11 Pro / NX809J recovery lane is now validated for recovery-partition-only development.
+
+Current recovery facts:
+
+- ABL unlock/restoration enabled working fastboot commands.
+- `fastboot boot` is not a valid recovery-mode validation path on this device.
+- Stock recovery boots through `adb reboot recovery`.
+- Stock recovery display and touch work.
+- Recovery ADB remains unauthorized, matching stock recovery behavior.
+- `recovery_a` and `recovery_b` can be flashed safely.
+- Byte-identical repacked stock recovery flashed to both recovery slots and still booted Android/recovery.
+- marker-001 and marker-002 proved static ramdisk modifications are safe so far.
+- marker-003 and marker-004 proved modified recovery ramdisk PNG resources execute on-device.
+
+Current safe lane:
+
+- use `recovery_a` and `recovery_b` only for recovery validation
+- do not use `fastboot boot` for recovery validation
+- keep rollback ready: `C:\RM11-test\recovery\rm11-repacked-stock-recovery.img`
+
+Hard restrictions:
+
+- no forced recovery cmdline images
+- no `boot`, `vendor_boot`, `init_boot`, or `vbmeta` work
+- no wipe/data behavior changes
+- no services/init actions unless separately reviewed
+
+---
+
 ## 1. O Problema do Carregamento Precoce (Early Boot Loading)
 
 No sistema Android moderno, os drivers essenciais de hardware (Touch Screen `zte_tpd`, Charger Policy `zte_charger_policy`, reguladores de voltagem, etc.) são carregados pelo processo `init` nos estágios iniciais de inicialização do sistema (`early-init` / `init`).
