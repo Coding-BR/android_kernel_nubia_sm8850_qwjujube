@@ -1,7 +1,7 @@
 # NEXT_STEPS - Tarefas Pendentes para Continuação
 
 **Dispositivo:** RedMagic 11 Pro (NX809J) — Snapdragon 8 Gen 5 (SM8850)  
-**Última atualização:** 2026-05-19  
+**Última atualização:** 2026-05-24
 
 ---
 
@@ -38,6 +38,32 @@ kernel_platform/common/include/linux/pinctrl/qcom-pinctrl.h (modificado)
 - **audio-kernel / swr_haptics_dlkm**: 8 funções comparadas 1:1 com Ghidra — 100% paridade
 - Detalhes em: `vendor/qcom/opensource/audio-kernel/analysis.md`
 
+### Touchscreen `zte_tpd` — Refatoração inicial concluída
+- Branch de trabalho: `codex/zte-tpd-input-device-refactor`
+- Commit atual: `ed8d40445d3ad748b0401221fb452ad335e14761`
+- Arquivo principal corrigido:
+  `kernel_platform/common/drivers/soc/qcom/zte/zte_tpd/syna_dev_set_up_input_device.c`
+- Status:
+  - `device + 656`, `device + 712` e writes diretos em bitmaps foram removidos do caminho compilado.
+  - Setup de `struct input_dev` agora usa campos nomeados e helpers do input subsystem.
+  - `./super_build.sh` compilou com sucesso.
+  - `./repack_perfect_sign.sh` gerou imagem de kernel testável.
+
+### Recovery Fastboot Test — Pronto para teste físico
+- Backup ROM usado:
+  `/mnt/e/Android/RM-11-Pro/BOOT/02-UL-Rom-16/images`
+- Manifest:
+  `/home/richtofen/android/output/recovery/RM11_RECOVERY_TEST_MANIFEST.md`
+- Imagem recomendada para o primeiro teste:
+  `/home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img`
+- SHA-256:
+  `da0cc68e4d814927d8232dadafd27a4c0741b8e547f2f457e1325113cf15788f`
+- Comando:
+  ```bash
+  fastboot boot /home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img
+  ```
+- Regra: usar apenas `fastboot boot` neste estágio. Não fazer flash permanente.
+
 ### Comando de Compilação (referência)
 ```bash
 # Execute a partir da raiz do repositório
@@ -67,15 +93,24 @@ KBUILD_MODPOST_WARN=1 make -C vendor/qcom/opensource/<TECHPACK> \
 
 ---
 
-## TAREFA 2: Compilar touch-drivers ⬜
+## TAREFA 2: Validar touchscreen `zte_tpd` em recovery ⏳
 
-**Source:** `vendor/qcom/opensource/touch-drivers/` — goodix_berlin_driver, focaltech_touch  
-**Decompiled disponível:** Não verificado
+**Source ativo:** `kernel_platform/common/drivers/soc/qcom/zte/zte_tpd/`
+**Backup antes da refatoração:** `/home/richtofen/android/output/kernel/touchscreen-work/zte_tpd-before-refactor`
 
 ### Passos:
-1. Verificar qual driver de toque o NX809J usa (verificar DT ou `/proc/bus/input/`)
-2. Compilar o driver correto
-3. Validar símbolos
+1. Bootar temporariamente a imagem de recovery gerada:
+   ```bash
+   fastboot boot /home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img
+   ```
+2. Verificar se recovery inicia e se o touchscreen responde.
+3. Se recovery iniciar sem touch, coletar logs e procurar por `zte_tpd`, `syna`, `input`, GPIO, regulator e panel notifier.
+4. Se houver reboot/crashdump, voltar ao kernel stock e coletar ramoops:
+   ```bash
+   cd /home/richtofen/android-kernel/android_kernel_nubia_sm8850_qwjujube
+   ./scratch/get_ramoops.sh
+   ```
+5. Só depois de um boot temporário bem-sucedido começar a adaptação real da ramdisk de custom recovery.
 
 ---
 

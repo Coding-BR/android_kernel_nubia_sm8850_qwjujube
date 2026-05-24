@@ -120,6 +120,51 @@ Esta é a melhor prática para ciclos rápidos de desenvolvimento e validação 
 
 ---
 
+### Estratégia 1B: Recovery Temporário com Kernel Built-in
+Use esta variação quando o objetivo for testar uma ramdisk de recovery ou preparar custom recovery sem gravar partições.
+
+No NX809J, o `recovery.img` stock é uma imagem de recovery com ramdisk, mas sem kernel próprio:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20458914]
+RAMDISK_FMT     [lz4_legacy]
+```
+
+Por isso, o primeiro teste seguro usa o `boot.img` stock como base de header/kernel container, injeta o `Image` rebuildado + `dtb.img`, e substitui a ramdisk pela ramdisk do `recovery.img`.
+
+Artifact atual recomendado:
+
+```text
+/home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img
+SHA-256: da0cc68e4d814927d8232dadafd27a4c0741b8e547f2f457e1325113cf15788f
+```
+
+Base ROM usada:
+
+```text
+/mnt/e/Android/RM-11-Pro/BOOT/02-UL-Rom-16/images
+```
+
+Comando de teste:
+
+```bash
+fastboot boot /home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img
+```
+
+Critérios de decisão:
+
+| Resultado | Próxima ação |
+| :--- | :--- |
+| Recovery inicia e touch funciona | Prosseguir para custom recovery ramdisk usando este kernel como base |
+| Recovery inicia sem touch | Coletar logs e continuar reparo de `zte_tpd` |
+| CrashDump/reboot | Voltar ao boot stock e coletar `scratch/ramoops.log` |
+
+Regra obrigatória: esta imagem é somente para `fastboot boot`. Não usar `fastboot flash` neste estágio.
+
+---
+
 ### Estratégia 2: Flash Físico na partição de Módulos (`vendor_dlkm`)
 Quando o driver estiver validado e for necessário realizar testes de longa duração (benchmarks, estabilidade de overclock da GPU, KernelSU-Next).
 
