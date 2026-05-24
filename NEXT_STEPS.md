@@ -1066,6 +1066,12 @@ RM11 Recovery
 
 Do not build a new image yet. The next work is evidence collection and recovery-side comparison.
 
+Detailed investigation file:
+
+```text
+TOUCH_INPUT_INVESTIGATION.md
+```
+
 Hard restrictions:
 - no `fastboot boot` recovery path
 - no force-recovery cmdline images
