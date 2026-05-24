@@ -31,6 +31,7 @@ slot_suffix.txt
 sys-class-input-find.txt
 sys-class-input.txt
 sys_boot_completed.txt
+touch-input-summary.txt
 ```
 
 Additional live-touch capture files:
@@ -59,6 +60,15 @@ Permission-limited captures:
 - `sys-class-input-find.txt` was empty from the unprivileged command
 
 No flashing, recovery reboot, boot image modification, kernel change, or recovery image build was performed for this capture.
+
+Fresh Android-side package refresh:
+
+```text
+folder: C:\RM11-test\touch-input-evidence-001
+time:   2026-05-24 12:35 America/Chicago
+```
+
+The refreshed package includes `touch-input-summary.txt`, a local summary of the captured Android input state.
 
 ---
 
@@ -211,6 +221,19 @@ The touchscreen node permissions in Android are:
 
 ```text
 crw-rw---- root input /dev/input/event9
+```
+
+Fresh capture summary file:
+
+```text
+C:\RM11-test\touch-input-evidence-001\touch-input-summary.txt
+```
+
+Summary conclusion:
+
+```text
+Android working touch is synaptics_tcm_touch on /dev/input/event9 with direct multitouch ABS_MT capabilities.
+Recovery comparison should focus on whether recovery runtime publishes and minui opens the equivalent event node.
 ```
 
 Relevant Android logcat clues:
