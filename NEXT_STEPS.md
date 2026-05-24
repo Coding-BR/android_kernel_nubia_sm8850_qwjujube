@@ -744,6 +744,50 @@ Pass criteria:
 - no black screen
 - no wipe
 
+Build result:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-003-visible-title.img
+SHA-256: 2F89BFC538854865A36D6764522ECEC0B7CAAE0DD5985390FC87E24391036766
+```
+
+Preview PNG:
+
+```text
+C:\RM11-test\recovery\marker-003-recovery_en.png
+```
+
+Only changed ramdisk resource:
+
+```text
+res/images/recovery_en.png
+```
+
+Header:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20456863]
+RAMDISK_FMT     [lz4_legacy]
+```
+
+Size:
+
+```text
+104857600 bytes = 0x6400000
+```
+
+Flash commands:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-003-visible-title.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-003-visible-title.img
+fastboot --set-active=a
+fastboot reboot
+```
+
 Rollback:
 
 ```powershell

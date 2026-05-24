@@ -786,6 +786,76 @@ Observation method:
 
 If the title still reads stock `Recovery`, then either the English resource was not selected or another resource controls the visible title. In that case, roll back and inspect the locale/resource selection before changing additional files.
 
+Marker-003 build result:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-003-visible-title.img
+/home/richtofen/android/output/recovery/rm11-recovery-marker-003-visible-title.img
+SHA-256: 2F89BFC538854865A36D6764522ECEC0B7CAAE0DD5985390FC87E24391036766
+```
+
+Preview PNG:
+
+```text
+C:\RM11-test\recovery\marker-003-recovery_en.png
+```
+
+Only changed ramdisk resource:
+
+```text
+res/images/recovery_en.png
+```
+
+Generated PNG verification:
+
+```text
+dimensions: 880 x 224
+mode:       indexed palette PNG
+visible:    Recovery 003
+```
+
+Image header verification:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20456863]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Size verification:
+
+```text
+image size:      104857600 bytes
+partition size:  0x6400000 = 104857600 bytes
+```
+
+Flash commands:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-003-visible-title.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-003-visible-title.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+Post-flash check:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb reboot recovery
+```
+
 Pass criteria for the first functional image:
 
 - Android still boots after flashing recovery partitions
