@@ -663,6 +663,28 @@ Manual recovery checks:
 - no black screen
 - do not wipe data
 
+Physical validation result: PASS.
+
+- `recovery_a` write OKAY
+- `recovery_b` write OKAY
+- `fastboot --set-active=a` OKAY
+- Android booted
+- `ro.boot.slot_suffix` remained `_a`
+- `sys.boot_completed` returned `1`
+- `ro.boot.verifiedbootstate` remained `orange`
+- `ro.boot.flash.locked` remained `0`
+- `adb reboot recovery` reached recovery behavior
+- recovery ADB appeared unauthorized, matching stock recovery behavior
+- no CrashDump
+- no FTM
+- no black screen
+
+Conclusion:
+
+- marker-002 confirms static recovery ramdisk modification is safe so far
+- marker-only recovery tests should stop here
+- the next test should be the first minimal functional recovery change, still recovery-partition only
+
 Rollback image:
 
 ```text
@@ -670,6 +692,60 @@ C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
 ```
 
 Rollback commands:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+---
+
+## Next Gate: Minimal Functional Recovery Change
+
+Goal: make one small recovery-only functional change that gives useful evidence without touching boot-critical partitions.
+
+Rules:
+
+- recovery partition only
+- no `boot`, `vendor_boot`, `init_boot`, `vbmeta`, or slot metadata changes
+- no `fastboot boot` recovery validation
+- no force-recovery cmdline image
+- no UI rewrite
+- no service chains or long-running custom daemons
+- no wipe/data-affecting changes
+- keep rollback image ready: `C:\RM11-test\recovery\rm11-repacked-stock-recovery.img`
+
+Recommended first functional target:
+
+1. Enable a controlled, recovery-only observability path.
+2. Keep the change inside the recovery ramdisk.
+3. Prefer a tiny init action that writes a harmless marker into a volatile path such as `/tmp`, only if the stock recovery file contexts and init syntax support it cleanly.
+4. Do not change USB authorization behavior yet unless it is understood from stock recovery files.
+
+Candidate functional test:
+
+```text
+on init
+    write /tmp/rm11_recovery_runtime_marker.txt "RM11 recovery runtime marker 003\n"
+```
+
+This candidate is not approved for flashing yet. First inspect stock recovery init syntax, `/tmp` file context, and whether recovery logs or UI can expose `/tmp` contents. If it cannot be observed, choose a different minimal functional test rather than stacking changes.
+
+Pass criteria for the first functional image:
+
+- Android still boots after flashing recovery partitions
+- `adb reboot recovery` still reaches recovery
+- recovery UI/display/touch still work
+- no CrashDump
+- no FTM
+- no black screen
+- no wipe
+- any new behavior is either directly visible or cleanly captured in recovery logs
+
+Rollback:
 
 ```powershell
 adb reboot bootloader

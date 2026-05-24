@@ -642,3 +642,51 @@ fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
 fastboot --set-active=a
 fastboot reboot
 ```
+
+Physical validation result: PASS.
+
+- `recovery_a` write OKAY
+- `recovery_b` write OKAY
+- `fastboot --set-active=a` OKAY
+- Android booted
+- slot stayed `_a`
+- `sys.boot_completed=1`
+- `ro.boot.verifiedbootstate=orange`
+- `ro.boot.flash.locked=0`
+- `adb reboot recovery` reached recovery behavior
+- recovery ADB stayed unauthorized, matching stock recovery behavior
+- no CrashDump
+- no FTM
+- no black screen
+
+Conclusion:
+- marker-002 confirms static recovery ramdisk modification path is safe so far
+- stop marker-only tests
+- next step is the first minimal functional recovery change, still recovery-partition only
+
+## Next Recovery Gate: First Functional Change
+
+Rules:
+- recovery partition only
+- no boot, vendor_boot, init_boot, vbmeta, or slot metadata changes
+- no `fastboot boot` recovery validation
+- no force-recovery cmdline image
+- no UI rewrite yet
+- no service chains or long-running custom daemons
+- no wipe/data-affecting changes
+- keep rollback image ready: `C:\RM11-test\recovery\rm11-repacked-stock-recovery.img`
+
+Recommended direction:
+- inspect stock recovery init syntax and file contexts before building
+- choose one tiny behavior change that can be observed or logged
+- prefer volatile paths like `/tmp` if used
+- do not change USB authorization behavior until the stock recovery ADB path is understood
+
+Candidate to investigate, not yet approved for flashing:
+
+```text
+on init
+    write /tmp/rm11_recovery_runtime_marker.txt "RM11 recovery runtime marker 003\n"
+```
+
+Build only after confirming the path and syntax are safe and after deciding how the runtime result will be observed.
