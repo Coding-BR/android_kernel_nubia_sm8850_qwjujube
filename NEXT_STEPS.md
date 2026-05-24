@@ -978,6 +978,29 @@ Size:
 104857600 bytes = 0x6400000
 ```
 
+Physical validation result: PASS.
+
+- `recovery_a` flash OKAY
+- `recovery_b` flash OKAY
+- `fastboot --set-active=a` OKAY
+- Android booted after flash
+- `sys.boot_completed=1`
+- slot stayed `_a`
+- `adb reboot recovery` reached recovery
+- recovery UI rendered normally
+- `button_normal.png` background resource change appeared active/visible
+- labels remained readable
+- no CrashDump
+- no FTM
+- no black screen
+
+Conclusion:
+- marker-005 validates a second recovery UI PNG resource path on-device
+- `res/images/recovery_en.png` was validated with marker-003/004
+- `res/images/button_normal.png` was validated with marker-005
+- stop UI-resource proof tests
+- recovery partition + recovery ramdisk + recovery UI resource modification lane is validated enough
+
 Physical test sequence:
 
 ```powershell
@@ -1038,3 +1061,69 @@ Use a polished stable title:
 ```text
 RM11 Recovery
 ```
+
+## Next Phase: Touchscreen/Input Investigation
+
+Do not build a new image yet. The next work is evidence collection and recovery-side comparison.
+
+Hard restrictions:
+- no `fastboot boot` recovery path
+- no force-recovery cmdline images
+- no boot, vendor_boot, init_boot, or vbmeta changes unless separately justified
+- no wipe/data changes
+- no risky init services/actions
+- recovery partition only for the current safe lane
+
+Stock recovery ramdisk findings:
+- `system/etc/ueventd.rc` creates `/dev/input`
+- `/dev/input/*` is `0660 root input`
+- `/sys/devices/virtual/input/input*` has `enable` and `poll_delay` permissions
+- `plat_file_contexts` labels `/dev/input(/.*)?` as `input_device`
+- `prop.default` contains `ro.minui.pixel_format=RGBX_8888`
+- vendor contexts mention touch paths:
+  - `/sys/devices/platform/synaptics_tcm.0/sysfs(/.*)?`
+  - `/sys/bus/platform/devices/synaptics_tcm.0/uevent`
+  - `/sys/devices/virtual/tsp_fw/touchscreen(/.*)?`
+  - `/sys/bus/platform/devices/zte_touch/uevent`
+  - `/data/vendor/touchscreen(/.*)?`
+  - `/dev/v4l-touch[0-9]*`
+  - `/dev/hbtp_input`
+- `system/bin/recovery` has no obvious `syna`, `synaptics`, `zte_tpd`, or touchscreen firmware strings, so recovery touch likely depends on generic minui/evdev plus kernel input driver state
+
+Collect from Android safe boot:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb shell getevent -lp
+adb shell dumpsys input
+adb shell ls -l /dev/input
+adb shell cat /proc/bus/input/devices
+adb shell getprop | findstr /i "touch input minui syna synaptics tpd zte"
+adb shell logcat -d | findstr /i "touch input syna synaptics tpd zte_tpd zte_touch minui evdev"
+```
+
+If root becomes available:
+
+```powershell
+adb shell su -c "dmesg | grep -iE 'touch|input|syna|synaptics|tpd|zte_touch|evdev|minui'"
+adb shell su -c "ls -R /sys/devices/platform/synaptics_tcm.0 /sys/bus/platform/devices/zte_touch /sys/devices/virtual/tsp_fw/touchscreen 2>/dev/null"
+adb shell su -c "cat /proc/kallsyms | grep -iE 'syna|synaptics|zte_tpd|input_register_device'"
+```
+
+Questions to answer:
+- What is the Android touchscreen input device name/vendor/product/event node?
+- Does Android expose touch via `/dev/input/event*`, `/dev/v4l-touch*`, `/dev/hbtp_input`, or another path?
+- Which driver owns it: `synaptics_tcm`, `zte_touch`, `zte_tpd`, or another wrapper?
+- Are firmware/config files needed from `/vendor/firmware`, `/data/vendor/touchscreen`, or `/sys/devices/virtual/tsp_fw/touchscreen`?
+- Does recovery minui need only evdev, or does Android userspace transform touch events before apps see them?
+- Is there any orientation/rotation mismatch indicated by `ro.minui.default_rotation` or Android input transforms?
+
+Possible issue classes:
+- kernel driver does not initialize touch in recovery path
+- DTB/input node mismatch
+- recovery/minui input handling mismatch
+- missing firmware/config in recovery ramdisk or unavailable mounted path
+- panel/touch orientation or coordinate mapping issue
+- input device exists but permissions/uevent timing prevent recovery from opening it

@@ -1118,6 +1118,30 @@ image size:      104857600 bytes
 partition size:  0x6400000 = 104857600 bytes
 ```
 
+Physical validation result: PASS.
+
+- `recovery_a` flash OKAY
+- `recovery_b` flash OKAY
+- `fastboot --set-active=a` OKAY
+- Android booted after flash
+- `sys.boot_completed=1`
+- `ro.boot.slot_suffix=_a`
+- `adb reboot recovery` reached recovery
+- recovery UI rendered normally
+- `button_normal.png` background resource change appeared active/visible
+- menu labels remained readable
+- no CrashDump
+- no FTM
+- no black screen
+
+Conclusion:
+
+- marker-005 validates a second recovery UI PNG resource path on-device
+- previously validated `res/images/recovery_en.png` through marker-003/004
+- now validated `res/images/button_normal.png` through marker-005
+- stop UI-resource proof tests
+- recovery partition + recovery ramdisk + recovery UI resource modification lane is validated enough
+
 Marker-005 image requirements:
 
 ```text
@@ -1217,6 +1241,89 @@ RM11 Recovery
 ```
 
 This fallback is less useful as a second resource proof, but it would produce a cleaner stable custom recovery title baseline.
+
+---
+
+## Next Phase: Touchscreen/Input Investigation
+
+Goal: move from recovery UI proof-of-control to touchscreen/input evidence collection and recovery-side comparison. Do not build a new image until the evidence points to a specific low-risk change.
+
+Hard restrictions remain:
+
+- no `fastboot boot` recovery path
+- no force-recovery cmdline images
+- no `boot`, `vendor_boot`, `init_boot`, or `vbmeta` changes unless separately justified
+- no wipe/data changes
+- no risky init services/actions
+- recovery partition only for the current safe lane
+
+Initial stock recovery ramdisk findings:
+
+- `system/etc/ueventd.rc` creates input nodes under `/dev/input`
+- `/dev/input/*` is assigned `0660 root input`
+- `/sys/devices/virtual/input/input*` exposes `enable` and `poll_delay` permissions
+- `plat_file_contexts` labels `/dev/input(/.*)?` as `input_device`
+- `plat_property_contexts` contains recovery/minui properties:
+  - `ro.minui.default_rotation`
+  - `ro.minui.overscan_percent`
+  - `ro.minui.pixel_format`
+- `prop.default` contains `ro.minui.pixel_format=RGBX_8888`
+- vendor file contexts contain touch-related paths:
+  - `/sys/devices/platform/synaptics_tcm.0/sysfs(/.*)?`
+  - `/sys/bus/platform/devices/synaptics_tcm.0/uevent`
+  - `/sys/devices/virtual/tsp_fw/touchscreen(/.*)?`
+  - `/sys/bus/platform/devices/zte_touch/uevent`
+  - `/data/vendor/touchscreen(/.*)?`
+  - `/dev/v4l-touch[0-9]*`
+  - `/dev/hbtp_input`
+- `system/bin/recovery` strings do not show obvious `syna`, `synaptics`, `zte_tpd`, or touchscreen firmware filenames; input handling is likely generic recovery/minui evdev behavior plus kernel/input driver availability
+
+Evidence to collect from Android while the device is safely booted:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb shell getevent -lp
+adb shell dumpsys input
+adb shell ls -l /dev/input
+adb shell cat /proc/bus/input/devices
+adb shell getprop | findstr /i "touch input minui syna synaptics tpd zte"
+adb shell logcat -d | findstr /i "touch input syna synaptics tpd zte_tpd zte_touch minui evdev"
+```
+
+If root is available later:
+
+```powershell
+adb shell su -c "dmesg | grep -iE 'touch|input|syna|synaptics|tpd|zte_touch|evdev|minui'"
+adb shell su -c "ls -R /sys/devices/platform/synaptics_tcm.0 /sys/bus/platform/devices/zte_touch /sys/devices/virtual/tsp_fw/touchscreen 2>/dev/null"
+adb shell su -c "cat /proc/kallsyms | grep -iE 'syna|synaptics|zte_tpd|input_register_device'"
+```
+
+Comparison questions:
+
+- What is the Android touchscreen input device name, vendor, product, bus, and event node?
+- Does Android expose touch through `/dev/input/event*`, `/dev/v4l-touch*`, `/dev/hbtp_input`, or another path?
+- Which driver owns the device: `synaptics_tcm`, `zte_touch`, `zte_tpd`, or another wrapper?
+- Are firmware/config paths needed from `/vendor/firmware`, `/data/vendor/touchscreen`, or `/sys/devices/virtual/tsp_fw/touchscreen`?
+- Does recovery minui need only a normal evdev device, or is touch being transformed by an Android userspace service that recovery does not run?
+- Is any orientation/rotation mismatch indicated by `ro.minui.default_rotation` or the Android input transform?
+
+Likely issue classes to separate:
+
+- kernel driver does not initialize touch in recovery path
+- DTB/input node mismatch
+- recovery/minui generic input handling mismatch
+- missing firmware/config in recovery ramdisk or unavailable mounted path
+- panel/touch orientation or coordinate mapping issue
+- input device exists but permissions/uevent timing prevent recovery from opening it
+
+First possible recovery-only change should be chosen only after evidence collection. Candidate categories:
+
+- add a harmless recovery UI/input diagnostic resource if visual-only evidence is still needed
+- add minimal recovery ramdisk config only if stock recovery expects a file that is missing
+- adjust recovery/minui properties only if a clear rotation/pixel/input mismatch is found
+- avoid init services/actions until there is a specific, testable need
 
 ---
 
