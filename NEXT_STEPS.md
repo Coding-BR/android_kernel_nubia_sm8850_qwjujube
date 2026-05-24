@@ -375,3 +375,34 @@ Avoid:
 - more random `androidboot.*=recovery` cmdline images
 - slot-B boot flashing for this loop
 - any wipe/data-affecting recovery menu action
+
+## Recovery Partition Baseline Artifact
+
+Prepared a no-change repack of stock `recovery.img` to validate tooling before any custom recovery ramdisk edits.
+
+Image:
+
+```text
+/home/richtofen/android/output/recovery/rm11-repacked-stock-recovery.img
+C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+SHA-256: 1158594eb464748cd5e9313cc10b6505cdd58fe03ce09a9e7da0b3f7a1e4187d
+```
+
+Result:
+- byte-identical to E: ROM stock `recovery.img`
+- header remains ramdisk-only:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20458914]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Meaning:
+- `magiskboot` unpack/repack preserves this recovery image exactly.
+- The next recovery-partition test, when intentionally chosen, should start from this known-good baseline before adding custom recovery changes.
+- This artifact is safe as a reference copy, but still should not be flashed casually.
