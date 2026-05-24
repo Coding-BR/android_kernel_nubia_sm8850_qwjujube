@@ -301,6 +301,90 @@ Expected marker validation may require recovery ADB authorization or recovery lo
 
 ---
 
+## Minimal Marker Recovery Image Result
+
+Built a minimal recovery ramdisk marker image from the known-good byte-identical stock recovery baseline.
+
+Image:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-ramdisk.img
+/home/richtofen/android/output/recovery/rm11-recovery-marker-ramdisk.img
+SHA-256: FF1DE80E20EF2CBEA3391351D6F184EBF2023DE30888B1D524F3854D57C01367
+```
+
+Only ramdisk change:
+
+```text
+rm11_recovery_marker.txt
+```
+
+Marker content:
+
+```text
+RM11 recovery marker test
+created=2026-05-24
+source=rm11-repacked-stock-recovery.img
+purpose=ramdisk-only marker validation
+```
+
+Header check:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20459088]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Flashed partitions:
+
+```powershell
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-ramdisk.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-ramdisk.img
+```
+
+Fastboot result:
+
+```text
+Sending 'recovery_a' (102400 KB) OKAY
+Writing 'recovery_a' OKAY
+Sending 'recovery_b' (102400 KB) OKAY
+Writing 'recovery_b' OKAY
+```
+
+Post-flash Android state:
+
+```text
+adb devices      -> 912607710184 device
+ro.boot.slot_suffix -> _a
+sys.boot_completed -> 1
+ro.boot.verifiedbootstate -> orange
+ro.boot.flash.locked -> 0
+```
+
+No boot, vendor_boot, init_boot, vbmeta, or slot metadata was modified.
+
+Next validation:
+
+```powershell
+adb reboot recovery
+```
+
+Manual checks:
+
+- recovery UI appears
+- display works
+- touch works
+- do not wipe data
+- if recovery ADB becomes authorized, check for `/rm11_recovery_marker.txt`
+- otherwise validate only that recovery still boots normally after marker-only ramdisk change
+
+---
+
 ## Next Technical Investigation
 
 Compare stock recovery boot environment versus Android after `fastboot boot`:

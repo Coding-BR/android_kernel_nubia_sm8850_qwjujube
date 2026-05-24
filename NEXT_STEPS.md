@@ -430,3 +430,48 @@ fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
 ```
 
 Do not touch boot, vendor_boot, init_boot, vbmeta, or active slot metadata for this validation.
+
+## Minimal Recovery Marker Flash Result
+
+Built and flashed a marker-only recovery ramdisk image.
+
+Image:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-ramdisk.img
+SHA-256: FF1DE80E20EF2CBEA3391351D6F184EBF2023DE30888B1D524F3854D57C01367
+```
+
+Only ramdisk addition:
+
+```text
+rm11_recovery_marker.txt
+```
+
+Flashed only:
+
+```powershell
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-ramdisk.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-ramdisk.img
+```
+
+Result:
+- `recovery_a` write OKAY
+- `recovery_b` write OKAY
+- Android rebooted safely afterward
+- current slot remains `_a`
+- `sys.boot_completed=1`
+- `ro.boot.verifiedbootstate=orange`
+- `ro.boot.flash.locked=0`
+
+Next validation:
+
+```powershell
+adb reboot recovery
+```
+
+Manual checks:
+- recovery UI appears
+- display works
+- touch works
+- do not wipe data
