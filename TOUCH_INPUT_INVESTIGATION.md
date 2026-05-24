@@ -74,6 +74,8 @@ The refreshed package includes `touch-input-summary.txt`, a local summary of the
 
 ## Android Touchscreen Identity
 
+Current state: Android-side touchscreen evidence is confirmed.
+
 Confirmed Android touchscreen identity:
 
 ```text
@@ -97,7 +99,10 @@ Android `dumpsys input` identity:
 ```text
 Device 1: synaptics_tcm_touch
 Path: /dev/input/event9
+Classes: KEYBOARD | TOUCH | TOUCH_MT
 Sources: KEYBOARD | TOUCHSCREEN | TOUCH_MT
+Touch mapping: TOUCH_SCREEN / MULTI_TOUCH
+Android display size: 1216x2688
 ```
 
 Important note:
@@ -152,6 +157,8 @@ Correction note:
 - The live event9 touch capture is confirmed, not incomplete.
 - Manual summary confirmed `BTN_TOUCH DOWN`, `ABS_MT_POSITION_X`, `ABS_MT_POSITION_Y`, `ABS_MT_SLOT`, and repeated `SYN_REPORT`.
 - `ABS_MT_SLOT` is also confirmed as a device capability from `getevent -lp` with max slot `9`.
+- Android input stack maps the device as `TOUCH_SCREEN` with `MULTI_TOUCH`.
+- Android display viewport reports `1216x2688`.
 
 Conclusion:
 
@@ -422,18 +429,51 @@ Do not build or flash a new image yet.
 
 Android-side live event proof is now complete enough to proceed with design work, but still not enough to justify a risky image.
 
+Known limitations:
+
+- `dmesg` and `/proc/bus/input/devices` are permission-limited from unprivileged Android.
+- Recovery ADB remains unauthorized, so runtime recovery shell access is not available.
+
+Current narrowed problem:
+
+Stock Android proves the Synaptics hardware, driver, and input node work. The remaining unknown is recovery runtime behavior:
+
+1. whether recovery creates the same event node
+2. whether minui scans and opens it
+3. whether the node appears too late for recovery input initialization
+4. whether recovery permissions/classification differ from Android
+5. whether recovery logs expose input/minui/evdev discovery
+
 Next safe step:
 
-1. Keep the validated recovery partition lane unchanged.
-2. Design a recovery-only observability test that can reveal whether recovery userspace/minui sees and opens a usable `/dev/input/event*` touch node during recovery boot.
-3. Prefer an approach that stays inside the recovery ramdisk and does not touch boot, vendor_boot, init_boot, vbmeta, slots, wipe/data behavior, or fastboot boot.
-4. Do not build that test until its observability path is reviewed.
+Path A only:
+
+1. Boot stock or current marker recovery through the normal recovery path.
+2. Manually open `Advanced options -> View recovery logs`.
+3. Photograph any pages that mention:
+   - `input`
+   - `touch`
+   - `evdev`
+   - `minui`
+   - `event`
+   - `synaptics`
+   - `tcm`
+   - `spi19`
+   - `/dev/input`
+   - `ueventd`
+   - `hbtp`
+   - `v41`
+   - `zte_touch`
+4. Record manual behavior:
+   - touch works or not
+   - volume navigation works or not
+   - power select works or not
+   - `View recovery logs` accessible or not
 
 Recommended next test design target:
 
-- A recovery-only diagnostic that prints or displays the discovered `/dev/input/event*` devices and highlights any node named `synaptics_tcm_touch`.
-- The test should answer one question: does recovery userspace/minui actually see/open `/dev/input/event9` or the recovery-time equivalent Synaptics event node?
-- Avoid services/actions until reviewed; if a binary helper or UI change is proposed, keep it recovery-ramdisk-only and reversible.
+- Do not propose or build a Path B logger until Path A is recorded.
+- A passive recovery logger may be considered only if `View recovery logs` gives no usable input/runtime evidence.
 
 Potential later recovery-only diagnostic options, each requiring separate review:
 

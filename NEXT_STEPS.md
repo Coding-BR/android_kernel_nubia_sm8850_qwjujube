@@ -38,6 +38,60 @@ Hard restrictions:
 
 ---
 
+## Current Touchscreen State
+
+Confirmed Android working touchscreen:
+
+```text
+event node: /dev/input/event9
+name:       synaptics_tcm_touch
+location:   synaptics_tcm/touch_input
+sysfs path: /sys/devices/platform/soc/1ac0000.qcom,qupv3_4_geni_se/1a80000.spi/spi_master/spi19/spi19.0
+classes:    KEYBOARD | TOUCH | TOUCH_MT
+mapping:    TOUCH_SCREEN / MULTI_TOUCH
+display:    1216x2688
+```
+
+Live `getevent` proof confirmed:
+
+```text
+BTN_TOUCH DOWN
+ABS_MT_POSITION_X movement
+ABS_MT_POSITION_Y movement
+ABS_MT_SLOT
+SYN_REPORT
+```
+
+Known limitation:
+
+- `dmesg` and `/proc/bus/input/devices` are permission-limited from unprivileged Android.
+- recovery ADB remains unauthorized, so runtime recovery shell is not available.
+
+Current narrowed problem:
+
+Stock Android proves the Synaptics hardware, driver, and input node work. The remaining unknown is recovery runtime behavior:
+
+1. whether recovery creates the same event node
+2. whether minui scans and opens it
+3. whether the node appears too late for recovery input initialization
+4. whether recovery permissions/classification differ from Android
+5. whether recovery logs expose input/minui/evdev discovery
+
+Next step is Path A only:
+
+1. Boot stock or current marker recovery through the normal recovery path.
+2. Open `Advanced options -> View recovery logs`.
+3. Photograph any pages mentioning `input`, `touch`, `evdev`, `minui`, `event`, `synaptics`, `tcm`, `spi19`, `/dev/input`, `ueventd`, `hbtp`, `v41`, or `zte_touch`.
+4. Record manual behavior:
+   - touch works or not
+   - volume navigation works or not
+   - power select works or not
+   - `View recovery logs` accessible or not
+
+Do not propose Path B logger until Path A is recorded. A passive recovery logger may be considered only if `View recovery logs` gives no usable input/runtime evidence.
+
+---
+
 ## Estado Atual — O Que Já Está Pronto
 
 ### Techpacks Compilados (9/9 disponíveis) — 49 módulos .ko ✅
@@ -82,20 +136,19 @@ kernel_platform/common/include/linux/pinctrl/qcom-pinctrl.h (modificado)
   - `./super_build.sh` compilou com sucesso.
   - `./repack_perfect_sign.sh` gerou imagem de kernel testável.
 
-### Recovery Fastboot Test — Pronto para teste físico
+### Recovery Fastboot Test — Encerrado / Não usar
 - Backup ROM usado:
   `/mnt/e/Android/RM-11-Pro/BOOT/02-UL-Rom-16/images`
 - Manifest:
   `/home/richtofen/android/output/recovery/RM11_RECOVERY_TEST_MANIFEST.md`
-- Imagem recomendada para o primeiro teste:
+- Imagem histórica testada:
   `/home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img`
 - SHA-256:
   `da0cc68e4d814927d8232dadafd27a4c0741b8e547f2f457e1325113cf15788f`
-- Comando:
-  ```bash
-  fastboot boot /home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img
-  ```
-- Regra: usar apenas `fastboot boot` neste estágio. Não fazer flash permanente.
+- Resultado:
+  `fastboot boot` is not a valid recovery validation path on RM11 Pro; it routes Android context even with stock kernel/DTB plus stock recovery ramdisk.
+- Regra atual:
+  não usar `fastboot boot` para recovery. Usar apenas fluxo normal de recovery e/ou `recovery_a`/`recovery_b` quando explicitamente aprovado.
 
 ### Comando de Compilação (referência)
 ```bash
@@ -131,19 +184,23 @@ KBUILD_MODPOST_WARN=1 make -C vendor/qcom/opensource/<TECHPACK> \
 **Source ativo:** `kernel_platform/common/drivers/soc/qcom/zte/zte_tpd/`
 **Backup antes da refatoração:** `/home/richtofen/android/output/kernel/touchscreen-work/zte_tpd-before-refactor`
 
-### Passos:
-1. Bootar temporariamente a imagem de recovery gerada:
-   ```bash
-   fastboot boot /home/richtofen/android/output/recovery/rm11-e-rom-recovery-fastboot-fixed-kernel-bootbase.img
-   ```
-2. Verificar se recovery inicia e se o touchscreen responde.
-3. Se recovery iniciar sem touch, coletar logs e procurar por `zte_tpd`, `syna`, `input`, GPIO, regulator e panel notifier.
-4. Se houver reboot/crashdump, voltar ao kernel stock e coletar ramoops:
-   ```bash
-   cd /home/richtofen/android-kernel/android_kernel_nubia_sm8850_qwjujube
-   ./scratch/get_ramoops.sh
-   ```
-5. Só depois de um boot temporário bem-sucedido começar a adaptação real da ramdisk de custom recovery.
+### Próximo passo permitido: Path A only
+
+1. Não compilar imagem.
+2. Não fazer flash.
+3. Não alterar kernel, DTB, `vendor_boot`, `init_boot`, `vbmeta`, slots ou recovery image.
+4. Bootar recovery pelo caminho normal já validado.
+5. Abrir manualmente:
+   `Advanced options -> View recovery logs`
+6. Fotografar qualquer página que mencione:
+   `input`, `touch`, `evdev`, `minui`, `event`, `synaptics`, `tcm`, `spi19`, `/dev/input`, `ueventd`, `hbtp`, `v41`, `zte_touch`.
+7. Registrar comportamento manual:
+   - touch funciona ou não
+   - navegação por volume funciona ou não
+   - power select funciona ou não
+   - `View recovery logs` abre ou não
+
+Path B logger passivo só será considerado se Path A não trouxer evidência útil.
 
 ---
 
