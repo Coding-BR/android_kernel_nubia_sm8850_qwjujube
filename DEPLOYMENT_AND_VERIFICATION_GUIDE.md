@@ -176,6 +176,32 @@ Conclusão: neste aparelho, `fastboot boot` valida que a imagem é carregável p
 
 Nova regra: não criar mais imagens com flags aleatórias `androidboot.*=recovery`. Uma tentativa com `androidboot.mode=recovery` e `androidboot.bootmode=recovery` causou CrashDump.
 
+#### Próximo protocolo seguro: partição recovery
+
+O próximo passo controlado está documentado em:
+
+```text
+RECOVERY_PARTITION_TEST_PLAN.md
+```
+
+O primeiro teste de partição deve ser um no-op: gravar somente `recovery_a` e `recovery_b` com a imagem repackada que é byte-idêntica ao stock `recovery.img`.
+
+Baseline:
+
+```text
+C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+SHA-256: 1158594EB464748CD5E9313CC10B6505CDD58FE03CE09A9E7DA0B3F7A1E4187D
+```
+
+Comandos candidatos, apenas após todos os preflights do plano:
+
+```powershell
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+```
+
+Não tocar em `boot`, `vendor_boot`, `init_boot`, `vbmeta` ou metadata de slot ativo neste protocolo.
+
 ---
 
 ### Estratégia 2: Flash Físico na partição de Módulos (`vendor_dlkm`)

@@ -406,3 +406,27 @@ Meaning:
 - `magiskboot` unpack/repack preserves this recovery image exactly.
 - The next recovery-partition test, when intentionally chosen, should start from this known-good baseline before adding custom recovery changes.
 - This artifact is safe as a reference copy, but still should not be flashed casually.
+
+## Controlled Recovery Partition Plan
+
+Detailed plan:
+
+```text
+RECOVERY_PARTITION_TEST_PLAN.md
+```
+
+Next action is not another `fastboot boot` image. The next controlled gate is a no-op recovery partition write using the byte-identical repacked stock recovery baseline:
+
+```text
+C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+SHA-256: 1158594EB464748CD5E9313CC10B6505CDD58FE03CE09A9E7DA0B3F7A1E4187D
+```
+
+Candidate commands, only after all preflight checks in the plan pass:
+
+```powershell
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+```
+
+Do not touch boot, vendor_boot, init_boot, vbmeta, or active slot metadata for this validation.
