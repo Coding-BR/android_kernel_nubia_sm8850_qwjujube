@@ -385,6 +385,112 @@ Manual checks:
 
 ---
 
+## Marker 001 Recovery Image Result
+
+Built a second minimal marker image using the preferred marker text and preserving the existing `/etc -> /system/etc` symlink.
+
+Note: in the stock recovery ramdisk, `/etc` is a symlink to `/system/etc`. To avoid replacing or disturbing that symlink, the marker was placed at:
+
+```text
+system/etc/rm11_recovery_marker.txt
+```
+
+At runtime, this should correspond to:
+
+```text
+/etc/rm11_recovery_marker.txt
+```
+
+Marker content:
+
+```text
+RM11 recovery ramdisk marker test 001
+```
+
+Image:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-001.img
+/home/richtofen/android/output/recovery/rm11-recovery-marker-001.img
+SHA-256: D14DA83E240888B711853E24196C60B647EE5166398F7E2FC27EDEECF535C61E
+```
+
+Header check:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20458935]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Image size:
+
+```text
+104857600 bytes
+```
+
+Partition size:
+
+```text
+0x6400000 = 104857600 bytes
+```
+
+Flash commands executed:
+
+```powershell
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-001.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-001.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+Fastboot result:
+
+```text
+Sending 'recovery_a' (102400 KB) OKAY
+Writing 'recovery_a' OKAY
+Sending 'recovery_b' (102400 KB) OKAY
+Writing 'recovery_b' OKAY
+Setting current slot to 'a' OKAY
+```
+
+Post-flash Android state:
+
+```text
+adb devices      -> 912607710184 device
+ro.boot.slot_suffix -> _a
+sys.boot_completed -> 1
+ro.boot.verifiedbootstate -> orange
+ro.boot.flash.locked -> 0
+```
+
+Recovery boot command sent:
+
+```powershell
+adb reboot recovery
+```
+
+Manual validation pending:
+
+- recovery UI appears
+- display works
+- touch works
+- no CrashDump
+- no FTM
+- no wipe
+
+Artifacts/logs:
+
+```text
+C:\RM11-test\recovery-marker-001-flash
+```
+
+---
+
 ## Next Technical Investigation
 
 Compare stock recovery boot environment versus Android after `fastboot boot`:

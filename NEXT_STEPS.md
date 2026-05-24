@@ -475,3 +475,62 @@ Manual checks:
 - display works
 - touch works
 - do not wipe data
+
+## Marker 001 Recovery Flash Result
+
+Built marker image:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-001.img
+SHA-256: D14DA83E240888B711853E24196C60B647EE5166398F7E2FC27EDEECF535C61E
+```
+
+Marker path inside ramdisk:
+
+```text
+system/etc/rm11_recovery_marker.txt
+```
+
+Reason: stock recovery ramdisk has `/etc -> /system/etc`, so placing the marker under `system/etc` preserves the existing `/etc` symlink.
+
+Marker content:
+
+```text
+RM11 recovery ramdisk marker test 001
+```
+
+Header:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20458935]
+RAMDISK_FMT     [lz4_legacy]
+```
+
+Flashed only:
+
+```powershell
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-001.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-001.img
+fastboot --set-active=a
+```
+
+Post-flash Android state:
+- Android returned safely
+- slot `_a`
+- `sys.boot_completed=1`
+- `ro.boot.verifiedbootstate=orange`
+- `ro.boot.flash.locked=0`
+
+Recovery boot command sent:
+
+```powershell
+adb reboot recovery
+```
+
+Manual validation pending on device screen:
+- recovery UI
+- display
+- touch
+- no wipe
