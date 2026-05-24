@@ -633,16 +633,6 @@ fastboot --set-active=a
 fastboot reboot
 ```
 
-Rollback:
-
-```powershell
-adb reboot bootloader
-fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
-fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
-fastboot --set-active=a
-fastboot reboot
-```
-
 Physical validation result: PASS.
 
 - `recovery_a` write OKAY
@@ -844,6 +834,31 @@ fastboot --set-active=a
 fastboot reboot
 ```
 
+Physical validation result: PASS.
+
+- recovery booted after flashing marker-004
+- UI showed `Recovery 004` on-device
+- corrected title fit cleanly
+- recovery menu still rendered normally
+- touch/display behavior appeared normal
+- no CrashDump
+- no FTM
+- no black screen
+
+Conclusion:
+- marker-003 proved the modified ramdisk UI resource loaded, with a fit issue
+- marker-004 fixed the title fit
+- recovery partition ramdisk modifications are executing on-device
+- recovery UI PNG resource replacement is validated
+- recovery-only partition work remains the safe lane
+
+Warnings to keep:
+- no `fastboot boot` recovery testing
+- no force-recovery cmdline images
+- no boot, vendor_boot, init_boot, or vbmeta changes
+- no wipe/data changes
+- recovery-only partition work remains the safe lane
+
 Rollback:
 
 ```powershell
@@ -852,4 +867,65 @@ fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
 fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
 fastboot --set-active=a
 fastboot reboot
+```
+
+## Marker 005 Proposal: Second Visible UI Resource
+
+Do not build marker-005 until reviewed.
+
+Recommended file:
+
+```text
+res/images/button_normal.png
+```
+
+Expected visual result:
+- keep the stock `928 x 160` button background
+- add a tiny `RM11` or `005` mark in the lower-right corner inside the border
+- keep the center area clear so menu labels do not overlap
+- leave button dimensions and palette style intact
+
+Why this is safe:
+- static recovery ramdisk PNG resource only
+- no recovery binary change
+- no menu string change
+- no init action/service/property change
+- no boot, vendor_boot, init_boot, vbmeta, or slot metadata change
+- no wipe/data behavior change
+- visible on the main recovery menu without authorized recovery ADB
+
+Pass criteria:
+- Android boots after flashing recovery partitions
+- slot remains `_a`
+- `sys.boot_completed=1`
+- `adb reboot recovery` reaches recovery
+- recovery menu appears normally
+- small marker is visible on unselected button backgrounds
+- menu labels remain readable
+- display/touch still work
+- no CrashDump
+- no FTM
+- no black screen
+- no wipe
+
+Rollback:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+Fallback if button marking is rejected:
+
+```text
+res/images/recovery_en.png
+```
+
+Use a polished stable title:
+
+```text
+RM11 Recovery
 ```

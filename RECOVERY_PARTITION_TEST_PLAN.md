@@ -930,6 +930,32 @@ fastboot --set-active=a
 fastboot reboot
 ```
 
+Physical validation result: PASS.
+
+- recovery booted after flashing `rm11-recovery-marker-004-visible-title-fit.img`
+- UI showed `Recovery 004` on-device
+- corrected title fit cleanly
+- recovery menu still rendered normally
+- touch/display behavior appeared normal
+- no CrashDump
+- no FTM
+- no black screen
+
+Conclusion:
+
+- recovery partition ramdisk modifications are executing on-device
+- recovery UI PNG resource replacement is validated
+- marker-only and title-fit proof tests are complete
+- recovery-only partition work remains the safe lane
+
+Warnings to keep:
+
+- no `fastboot boot` recovery testing
+- no force-recovery cmdline images
+- no `boot`, `vendor_boot`, `init_boot`, or `vbmeta` changes
+- no wipe/data changes
+- recovery-only partition work remains the safe lane
+
 Pass criteria for the first functional image:
 
 - Android still boots after flashing recovery partitions
@@ -951,6 +977,119 @@ fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
 fastboot --set-active=a
 fastboot reboot
 ```
+
+---
+
+## Marker 005 Proposal: Second Visible UI Resource
+
+Goal: prove a second harmless recovery UI resource can be replaced without touching recovery code, menu strings, init, properties, boot partitions, or wipe behavior.
+
+Do not build marker-005 until this proposal is reviewed.
+
+Candidate resources inspected:
+
+- `res/images/recovery.png`: non-English/default title image; may not be selected because current locale is `ro.product.locale=en-US`
+- `res/images/recovery_en.png`: already validated by marker-003 and marker-004
+- `res/images/button_normal.png`: unselected menu button background; visible on the main menu and does not contain compiled menu labels
+- `res/images/button_active.png`: selected/active menu button background; visible but state-dependent
+- `res/images/toast.png` and `toast_long.png`: visible only if recovery shows toast messages, so not reliable for immediate confirmation
+
+Recommended marker-005 file:
+
+```text
+res/images/button_normal.png
+```
+
+Expected visual result:
+
+- keep the stock `928 x 160` button background
+- add a tiny `RM11` or `005` mark in the lower-right corner inside the border
+- keep the center area clear so menu labels such as `Reboot system`, `Wipe data`, and `Power off` do not overlap
+- do not alter button dimensions, transparency/palette style, or menu text
+
+Why this is safe:
+
+- it is a static ramdisk PNG resource
+- it changes only unselected button background appearance
+- it does not alter recovery binary code
+- it does not alter menu strings
+- it does not alter init actions, services, USB, ADB, mounts, boot control, wipe behavior, or partition routing
+- it should be visible immediately on the recovery menu without authorized recovery ADB
+
+Marker-005 image requirements:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_FMT     [lz4_legacy]
+```
+
+Keep unchanged:
+
+- `boot`
+- `vendor_boot`
+- `init_boot`
+- `vbmeta`
+- active slot metadata
+- `system/bin/recovery`
+- menu strings
+- init scripts/actions/services
+- properties
+- wipe/data behavior
+
+Observation method:
+
+1. Flash the marker-005 image to `recovery_a` and `recovery_b` only.
+2. Reboot Android and confirm slot/state.
+3. Run `adb reboot recovery`.
+4. On the main recovery menu, check whether unselected button backgrounds show the small lower-right marker.
+5. Confirm the title remains clean and the menu text is not obstructed.
+6. Do not enter wipe flows.
+
+Pass criteria:
+
+- Android still boots after flashing recovery partitions
+- `adb reboot recovery` reaches recovery
+- recovery menu appears normally
+- small marker is visible on unselected button background
+- menu labels remain readable
+- touch/display still work
+- no CrashDump
+- no FTM
+- no black screen
+- no wipe/data change
+
+Fail criteria:
+
+- marker overlaps menu labels
+- button backgrounds render incorrectly
+- recovery UI does not appear
+- touch/display behavior regresses
+- CrashDump, FTM, black screen, or boot loop
+
+Rollback:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+Fallback marker-005 if button background marking is rejected:
+
+```text
+res/images/recovery_en.png
+```
+
+Use a polished stable title:
+
+```text
+RM11 Recovery
+```
+
+This fallback is less useful as a second resource proof, but it would produce a cleaner stable custom recovery title baseline.
 
 ---
 
