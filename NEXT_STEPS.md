@@ -944,6 +944,40 @@ Build requirements:
 - verify `RAMDISK_FMT [lz4_legacy]`
 - verify image size is `<= 0x6400000`
 
+Build result:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-005.img
+SHA-256: 694EBA1214FF90F1DA496C2108E98479167B15F3F7EB631DEB64493402303394
+```
+
+Preview PNG:
+
+```text
+C:\RM11-test\recovery\marker-005-button_normal.png
+```
+
+Changed file list:
+
+```text
+res/images/button_normal.png
+```
+
+Header:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20458673]
+RAMDISK_FMT     [lz4_legacy]
+```
+
+Size:
+
+```text
+104857600 bytes = 0x6400000
+```
+
 Physical test sequence:
 
 ```powershell

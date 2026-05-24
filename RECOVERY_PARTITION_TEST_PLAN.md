@@ -1071,6 +1071,53 @@ Build plan:
 6. Copy output to `C:\RM11-test\recovery\rm11-recovery-marker-005.img`.
 7. Record SHA-256 after build.
 
+Marker-005 build result:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-005.img
+/home/richtofen/android/output/recovery/rm11-recovery-marker-005.img
+SHA-256: 694EBA1214FF90F1DA496C2108E98479167B15F3F7EB631DEB64493402303394
+```
+
+Preview PNG:
+
+```text
+C:\RM11-test\recovery\marker-005-button_normal.png
+```
+
+Changed file list:
+
+```text
+res/images/button_normal.png
+```
+
+Generated PNG verification:
+
+```text
+dimensions: 928 x 160
+mode:       indexed palette PNG
+visible:    tiny 005 mark in lower-right corner
+```
+
+Image header verification:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20458673]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Size verification:
+
+```text
+image size:      104857600 bytes
+partition size:  0x6400000 = 104857600 bytes
+```
+
 Marker-005 image requirements:
 
 ```text
