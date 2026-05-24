@@ -573,3 +573,72 @@ Next useful investigation:
 - determine whether stock recovery `View recovery logs` exposes enough detail for marker verification
 - determine whether recovery ADB authorization can be made available without changing recovery behavior
 - only after one of those works, consider a runtime marker under `/tmp` or another recovery-safe path
+
+## Marker 002 Static Recovery Image
+
+Built from:
+
+```text
+C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+SHA-256: 1158594EB464748CD5E9313CC10B6505CDD58FE03CE09A9E7DA0B3F7A1E4187D
+```
+
+Output:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-002.img
+SHA-256: D8BF44E93C54EC61AB3D6810B01E21EE36E74A90CB0B458F7BBBFCF4928703C5
+```
+
+Static ramdisk changes:
+
+```text
+system/etc/rm11_recovery_marker_002.txt
+init.recovery.qcom.rc comment only
+```
+
+Marker content:
+
+```text
+RM11 recovery ramdisk marker test 002
+static file only
+no init actions
+no services
+```
+
+Header verification:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20459092]
+RAMDISK_FMT     [lz4_legacy]
+```
+
+Size:
+
+```text
+104857600 bytes = 0x6400000
+```
+
+Note: this is exactly the recovery partition size, matching the stock/repacked recovery image shape already validated on marker-001.
+
+Flash commands:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-002.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-002.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+Rollback:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot --set-active=a
+fastboot reboot
+```

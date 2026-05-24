@@ -563,6 +563,124 @@ Optional later runtime visibility path, after marker-002 static validation:
 
 ---
 
+## Marker 002 Static Image Build Result
+
+Built from the known-good byte-identical stock recovery baseline:
+
+```text
+C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+SHA-256: 1158594EB464748CD5E9313CC10B6505CDD58FE03CE09A9E7DA0B3F7A1E4187D
+```
+
+Output image:
+
+```text
+C:\RM11-test\recovery\rm11-recovery-marker-002.img
+/home/richtofen/android/output/recovery/rm11-recovery-marker-002.img
+SHA-256: D8BF44E93C54EC61AB3D6810B01E21EE36E74A90CB0B458F7BBBFCF4928703C5
+```
+
+Static ramdisk changes only:
+
+```text
+system/etc/rm11_recovery_marker_002.txt
+init.recovery.qcom.rc comment only
+```
+
+Marker content:
+
+```text
+RM11 recovery ramdisk marker test 002
+static file only
+no init actions
+no services
+```
+
+Comment added to `init.recovery.qcom.rc`:
+
+```text
+# RM11 recovery marker 002 static validation
+```
+
+Header verification:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [0]
+RAMDISK_SZ      [20459092]
+PAGESIZE        [4096]
+CMDLINE         []
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Size verification:
+
+```text
+image size:      104857600 bytes
+partition size:  0x6400000 = 104857600 bytes
+```
+
+Note: the image is exactly the same size as the stock/repacked recovery image and exactly matches the recovery partition size. This matches the already validated baseline and marker-001 artifacts.
+
+Repacked ramdisk verification:
+
+- `system/etc/rm11_recovery_marker_002.txt` exists after unpacking the final image
+- marker content matches the requested static text
+- `init.recovery.qcom.rc` contains only the marker comment; no init action, service, property, or UI change was added
+
+Test commands, recovery partitions only:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+
+adb reboot bootloader
+
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-recovery-marker-002.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-recovery-marker-002.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+Post-flash validation:
+
+```powershell
+adb devices -l
+adb shell getprop ro.boot.slot_suffix
+adb shell getprop sys.boot_completed
+adb reboot recovery
+```
+
+Manual recovery checks:
+
+- recovery UI appears
+- display works
+- touch works
+- no CrashDump
+- no FTM
+- no black screen
+- do not wipe data
+
+Rollback image:
+
+```text
+C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+```
+
+Rollback commands:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot --set-active=a
+fastboot reboot
+```
+
+---
+
 ## Next Technical Investigation
 
 Compare stock recovery boot environment versus Android after `fastboot boot`:
