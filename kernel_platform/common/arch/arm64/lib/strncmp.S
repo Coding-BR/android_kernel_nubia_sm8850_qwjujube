@@ -60,30 +60,26 @@
 
 SYM_FUNC_START(__pi_strncmp)
 	cbz	limit, L(ret0)
-	/* dev-reverse safety check for strncmp:
-	 * avoid early boot crashes from truncated blob pointers.
-	 * Accept tagged kernel pointers by validating bits 48-55.
-	 */
-	lsr	x3, x0, #48
-	and	x3, x3, #0xff
-	cmp	x3, #0xff
-	b.eq	.L_devrev_strncmp_check_src2
-	cbz	x0, .L_devrev_strncmp_check_src2
-	cmp	x0, x1
-	cset	x0, ne
-	ret
+	/* Safety check for truncated src1 */
+	lsr	x3, x0, #32
+	cbnz	x3, .L_check_src2
+	cbz	x0, .L_check_src2
+	/* Restore truncated src1 */
+	adr	x3, .
+	lsr	x3, x3, #32
+	bfi	x0, x3, #32, #32
 
-.L_devrev_strncmp_check_src2:
-	lsr	x3, x1, #48
-	and	x3, x3, #0xff
-	cmp	x3, #0xff
-	b.eq	.L_devrev_strncmp_go
-	cbz	x1, .L_devrev_strncmp_go
-	cmp	x0, x1
-	cset	x0, ne
-	ret
+.L_check_src2:
+	/* Safety check for truncated src2 */
+	lsr	x3, x1, #32
+	cbnz	x3, .L_strncmp_go
+	cbz	x1, .L_strncmp_go
+	/* Restore truncated src2 */
+	adr	x3, .
+	lsr	x3, x3, #32
+	bfi	x1, x3, #32, #32
 
-.L_devrev_strncmp_go:
+.L_strncmp_go:
 	eor	tmp1, src1, src2
 	mov	zeroones, #REP8_01
 	tst	tmp1, #7
