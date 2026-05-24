@@ -258,3 +258,28 @@ Conclusion:
 - the current recovery test image boots Android instead of recovery
 - next work is recovery image construction/routing: bootconfig, cmdline, init_boot, vendor_boot, and recovery ramdisk behavior
 - no further slot-B flashing is needed for this specific loop while `fastboot boot` works
+
+## Force Recovery Cmdline Test Result
+
+Temporary fastboot test only; no flashing.
+
+Test image:
+- force-recovery-mode.img
+- based on working fastboot boot image
+- kept stock recovery ramdisk
+- added recovery-oriented cmdline flags:
+  - androidboot.mode=recovery
+  - androidboot.bootmode=recovery
+
+Observed result:
+- device entered blue memory dump / crashdump
+- device recovered safely back to Android on slot A
+- dmesg and pstore were not readable without root
+- logcat/getprop captures were saved under:
+  C:\RM11-test\force-recovery-crashdump
+
+Conclusion:
+- Do not retest force-recovery-mode.img.
+- Do not continue random cmdline forcing.
+- Stock recovery path works through adb reboot recovery, but fastboot boot recovery routing is still unresolved.
+- Next work should inspect bootloader/recovery routing, vendor_boot/init_boot behavior, and captured logs before building another image.
