@@ -283,3 +283,52 @@ Conclusion:
 - Do not continue random cmdline forcing.
 - Stock recovery path works through adb reboot recovery, but fastboot boot recovery routing is still unresolved.
 - Next work should inspect bootloader/recovery routing, vendor_boot/init_boot behavior, and captured logs before building another image.
+
+## Next Isolation Test: Stock Kernel + Recovery Ramdisk
+
+Purpose:
+- determine whether the fastboot-booted recovery ramdisk returns to Android even with the stock kernel and stock DTB.
+- separate recovery routing behavior from rebuilt-kernel behavior.
+
+Image built:
+
+```text
+/home/richtofen/android/output/recovery/rm11-stock-kernel-recovery-ramdisk-fastboot.img
+C:\RM11-test\recovery\rm11-stock-kernel-recovery-ramdisk-fastboot.img
+SHA-256: ebe6bb82c4c6ab90bacb7b54cceb9486aaf25d69dd54657ceeda76aebbda5d06
+```
+
+Composition:
+- E: ROM `boot.img` header/base
+- E: ROM `boot.img` stock kernel
+- E: ROM `boot.img` stock kernel DTB
+- E: ROM `recovery.img` stock recovery ramdisk
+
+Header check:
+
+```text
+HEADER_VER      [4]
+KERNEL_SZ       [39819776]
+RAMDISK_SZ      [20458914]
+PAGESIZE        [4096]
+CMDLINE         []
+KERNEL_DTB_SZ   [19286848]
+KERNEL_FMT      [raw]
+RAMDISK_FMT     [lz4_legacy]
+VBMETA
+```
+
+Test command:
+
+```bash
+fastboot boot C:\RM11-test\recovery\rm11-stock-kernel-recovery-ramdisk-fastboot.img
+```
+
+Interpretation:
+- Boots Android: recovery routing is not caused by the rebuilt kernel. Continue investigating bootloader/BCB/bootconfig/vendor_boot/init_boot routing.
+- Boots recovery: rebuilt kernel/DTB changes first-stage recovery behavior. Compare kernel config, bootconfig handling, and built-in driver changes.
+- CrashDump/reboot: stop testing this image and collect available logs.
+
+Rule:
+- use only `fastboot boot`.
+- do not flash this image.
