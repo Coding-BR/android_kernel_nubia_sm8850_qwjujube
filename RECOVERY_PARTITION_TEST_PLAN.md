@@ -734,11 +734,64 @@ on init
 
 This candidate is not approved for flashing yet. First inspect stock recovery init syntax, `/tmp` file context, and whether recovery logs or UI can expose `/tmp` contents. If it cannot be observed, choose a different minimal functional test rather than stacking changes.
 
+Updated observability finding:
+
+- recovery ADB remains unauthorized, so runtime file/property checks are not usable yet
+- `View recovery logs` references runtime files such as `/tmp/recovery.log`, `/cache/recovery/log`, and `/cache/recovery/last_log`
+- a static ramdisk marker will not appear in those logs unless recovery itself or init writes it at runtime
+- menu labels such as `Reboot system`, `Power off`, `Advanced options`, and `View recovery logs` are compiled into `system/bin/recovery`, so changing them would require binary patching
+- the recovery title graphics are plain ramdisk PNG resources under `res/images`
+
+Recommended marker-003 / first functional test:
+
+Change only the English recovery title PNG:
+
+```text
+res/images/recovery_en.png
+```
+
+Replace the title image with a same-size PNG that reads:
+
+```text
+Recovery 003
+```
+
+Keep:
+
+- dimensions: `880 x 224`
+- PNG format
+- simple white background and purple title styling matching stock
+- no menu text changes
+- no binary changes
+- no init actions
+- no services
+- no properties
+- no wipe/data behavior changes
+
+Why this is safe:
+
+- the changed file is a display resource loaded by recovery UI
+- it does not affect partition routing, USB, mounting, wiping, boot control, or ADB authorization
+- it is visible without authorized recovery ADB
+- rollback is the known-good byte-identical stock recovery image
+- if the title changes on screen, it proves the modified recovery ramdisk resource is being loaded by the real recovery boot path
+
+Observation method:
+
+1. Flash the marker-003 image to `recovery_a` and `recovery_b` only.
+2. Reboot Android and confirm slot/state.
+3. Run `adb reboot recovery`.
+4. On the recovery screen, check whether the top title reads `Recovery 003`.
+5. Do not enter wipe flows.
+
+If the title still reads stock `Recovery`, then either the English resource was not selected or another resource controls the visible title. In that case, roll back and inspect the locale/resource selection before changing additional files.
+
 Pass criteria for the first functional image:
 
 - Android still boots after flashing recovery partitions
 - `adb reboot recovery` still reaches recovery
 - recovery UI/display/touch still work
+- recovery title visibly reads `Recovery 003`
 - no CrashDump
 - no FTM
 - no black screen

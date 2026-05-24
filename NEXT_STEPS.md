@@ -690,3 +690,66 @@ on init
 ```
 
 Build only after confirming the path and syntax are safe and after deciding how the runtime result will be observed.
+
+## Marker 003 Recommendation: Visible Recovery Title
+
+Inspection result:
+- recovery menu labels are compiled into `system/bin/recovery`
+- `View recovery logs` reads runtime logs such as `/tmp/recovery.log`, `/cache/recovery/log`, and `/cache/recovery/last_log`
+- a static file or property marker is not visible while recovery ADB is unauthorized
+- the recovery title is a PNG resource in the ramdisk
+- current locale is `ro.product.locale=en-US`, so the English title resource is the smallest visible target
+
+Recommended first functional change:
+
+```text
+res/images/recovery_en.png
+```
+
+Replace it with a same-size PNG that visibly reads:
+
+```text
+Recovery 003
+```
+
+Keep unchanged:
+- boot
+- vendor_boot
+- init_boot
+- vbmeta
+- active slot metadata
+- recovery binary
+- menu strings
+- init actions
+- services
+- properties
+- wipe/data behavior
+
+Why this is the safest first functional test:
+- it is recovery partition only
+- it is ramdisk content only
+- it is visible from the recovery UI without authorized ADB
+- it proves the modified recovery ramdisk resource is being loaded
+- rollback is the known-good stock/repacked recovery image
+
+Pass criteria:
+- Android boots after flashing recovery partitions
+- slot remains `_a`
+- `sys.boot_completed=1`
+- `adb reboot recovery` reaches recovery
+- recovery title reads `Recovery 003`
+- display/touch still work
+- no CrashDump
+- no FTM
+- no black screen
+- no wipe
+
+Rollback:
+
+```powershell
+adb reboot bootloader
+fastboot flash recovery_a C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot flash recovery_b C:\RM11-test\recovery\rm11-repacked-stock-recovery.img
+fastboot --set-active=a
+fastboot reboot
+```
