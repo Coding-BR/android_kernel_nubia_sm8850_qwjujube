@@ -80,6 +80,19 @@
 	   boundary.  */
 
 SYM_FUNC_START(__pi_strlen)
+	/* dev-reverse safety check for strlen:
+	 * avoid early boot crashes from truncated blob pointers.
+	 * Accept tagged kernel pointers by validating bits 48-55.
+	 */
+	lsr	x1, x0, #48
+	and	x1, x1, #0xff
+	cmp	x1, #0xff
+	b.eq	.L_devrev_strlen_go
+	cbz	x0, .L_devrev_strlen_go
+	mov	x0, #0
+	ret
+
+.L_devrev_strlen_go:
 	and	tmp1, srcin, MIN_PAGE_SIZE - 1
 	mov	zeroones, REP8_01
 	cmp	tmp1, MIN_PAGE_SIZE - 16

@@ -60,6 +60,30 @@
 
 SYM_FUNC_START(__pi_strncmp)
 	cbz	limit, L(ret0)
+	/* dev-reverse safety check for strncmp:
+	 * avoid early boot crashes from truncated blob pointers.
+	 * Accept tagged kernel pointers by validating bits 48-55.
+	 */
+	lsr	x3, x0, #48
+	and	x3, x3, #0xff
+	cmp	x3, #0xff
+	b.eq	.L_devrev_strncmp_check_src2
+	cbz	x0, .L_devrev_strncmp_check_src2
+	cmp	x0, x1
+	cset	x0, ne
+	ret
+
+.L_devrev_strncmp_check_src2:
+	lsr	x3, x1, #48
+	and	x3, x3, #0xff
+	cmp	x3, #0xff
+	b.eq	.L_devrev_strncmp_go
+	cbz	x1, .L_devrev_strncmp_go
+	cmp	x0, x1
+	cset	x0, ne
+	ret
+
+.L_devrev_strncmp_go:
 	eor	tmp1, src1, src2
 	mov	zeroones, #REP8_01
 	tst	tmp1, #7

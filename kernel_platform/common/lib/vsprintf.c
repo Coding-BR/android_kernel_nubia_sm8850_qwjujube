@@ -698,6 +698,16 @@ static const char *check_pointer_msg(const void *ptr)
 	if (!ptr)
 		return "(null)";
 
+#ifdef CONFIG_64BIT
+	/*
+	 * dev-reverse safety guard:
+	 * Some proprietary blobs can pass truncated kernel pointers into %s.
+	 * Treat low/canonical-broken pointers as efault instead of dereferencing.
+	 */
+	if ((unsigned long)ptr < 0xfff0000000000000UL)
+		return "(efault)";
+#endif
+
 	if ((unsigned long)ptr < PAGE_SIZE || IS_ERR_VALUE(ptr))
 		return "(efault)";
 
