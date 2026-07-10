@@ -107,7 +107,7 @@ static int imem_read_u32(const char *compatible, u32 *out)
 	}
 
 	vendor_imem_info_addr = addr;
-	*out = readl(addr);
+	*out = __raw_readl(addr);
 	pr_debug("%s: %s = 0x%x\n", DRV_NAME, compatible, *out);
 
 	return 0;
@@ -214,12 +214,9 @@ EXPORT_SYMBOL(request_board_id);
  * Module Init / Exit
  * ====================================================================== */
 
-static struct proc_dir_entry *vendor_imem_dir;
-
 static int __init zte_imem_info_init(void)
 {
-	vendor_imem_dir = proc_mkdir("vendor_imem", NULL);
-	if (!vendor_imem_dir)
+	if (!proc_mkdir("vendor_imem", NULL))
 		return 0;
 
 	if (!proc_create("vendor_imem/ddr_id", 0444, NULL, &ddr_id_proc_fops))
@@ -247,17 +244,7 @@ err_ddr:
 	return 0;
 }
 
-static void __exit zte_imem_info_exit(void)
-{
-	remove_proc_entry("driver/board_id", NULL);
-	remove_proc_entry("driver/ddr_id", NULL);
-	remove_proc_entry("vendor_imem/board_id", NULL);
-	remove_proc_entry("vendor_imem/ddr_id", NULL);
-	remove_proc_entry("vendor_imem", NULL);
-}
-
 module_init(zte_imem_info_init);
-module_exit(zte_imem_info_exit);
 
 MODULE_DESCRIPTION("ZTE Vendor IMEM Information Driver");
 MODULE_LICENSE("GPL");
