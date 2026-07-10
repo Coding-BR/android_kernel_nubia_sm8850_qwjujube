@@ -1,12 +1,6 @@
 name: Compile RedMagic 11 Pro Kernel (NX809J)
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:

@@ -225,3 +225,14 @@ If you have questions, need support, or want to collaborate on this reverse engi
 * 📧 **Email:** [idealcreativesuporte@idealcreative.com.br](mailto:idealcreativesuporte@idealcreative.com.br)
 * 💬 **Telegram Group:** [Join Group](https://t.me/redmagic11PR0) (Or direct contact: [@idealcreative](https://t.me/idealcreative))
 * 🌐 **XDA Thread:** [RedMagic 11 Pro Unlock & Guide](https://xdaforums.com/t/red-magic-11-pro-guide-bootloader-unlock-free-also-support-rm10-pad3pro-z70u-z80u-unlock-zte-family-toolbox.4780930/)
+
+## Local GitHub Releases
+
+This repository is intended to be built on the maintainer machine/container. A successful local build can publish the exact output to GitHub Releases with:
+
+`ash
+export GITHUB_TOKEN=<token with repo scope>
+python3 scripts/publish_local_release.py /path/to/build/artifacts --build-log /path/to/build.log
+`
+
+The local release package includes the generated boot images, kernel Image, mlinux, modules, kernel.config, build log, DTBs archive, and an opensource-<commit>.tar.gz archive created from the exact Git commit used for that build.
