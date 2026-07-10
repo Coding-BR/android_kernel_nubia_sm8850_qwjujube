@@ -28,9 +28,9 @@ This guide explains how to compile, pack, and boot the custom kernel with **Kern
 
 To ensure compilation and packaging work correctly, you must supply the following components (which are configured in `.gitignore` to keep the repository clean):
 
-1. **Clang Toolchain (r547379)**:
-   - Download the AOSP Clang toolchain (revision `r547379`).
-   - Extract it to the root of this repository in a folder named `clang-r547379/` (such that the main binary is located at `clang-r547379/bin/clang`).
+1. **Clang Toolchain (r536225)**:
+   - Download the AOSP Clang toolchain (revision `r536225`).
+   - Extract it to the root of this repository in a folder named `clang-r536225/` (such that the main binary is located at `clang-r536225/bin/clang`).
    - Alternatively, you can set the `CLANG_DIR` environment variable pointing to your Clang directory before compiling.
 
 2. **Device Tree Blob (`dtb.img`)**:

@@ -12,12 +12,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    env:
+      CLANG_VERSION: clang-r536225
+      RUST_VERSION: 1.82.0
     permissions:
       contents: write
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Dependencies
         run: |
@@ -29,8 +34,8 @@ jobs:
           # Install Rust 1.82.0 (matches nx809j_defconfig CONFIG_RUSTC_VERSION=108200).
           # Without correct Rust version, olddefconfig disables CONFIG_RUST=y in cascade,
           # changing SYSVIPC/POSIX_MQUEUE/DEVTMPFS/ASHMEM_RUST flags and struct layouts
-          # → stock qti_battery_charger.ko crashes with NULL pointer dereference at strcmp.
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.82.0 --component rust-src
+          # -> stock qti_battery_charger.ko crashes with NULL pointer dereference at strcmp.
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain "${RUST_VERSION}" --component rust-src
           source "$HOME/.cargo/env"
           rustup component add rust-src
           rustc --version
@@ -38,26 +43,28 @@ jobs:
           cargo install --locked bindgen-cli@0.69.5
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
-      - name: Download Clang Compiler (r547379)
+      - name: Download Android Clang Compiler
         run: |
-          echo "Downloading Android Clang r547379..."
-          git clone -b llvm-r547379-release --depth 1 --sparse --filter=blob:none https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 clang-bin
+          echo "Downloading Android Clang ${CLANG_VERSION}..."
+          git clone --filter=blob:none --sparse https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 clang-bin
           cd clang-bin
-          git sparse-checkout set clang-r547379
-          mv clang-r547379 ..
+          git sparse-checkout set "${CLANG_VERSION}"
+          git checkout main
+          mv "${CLANG_VERSION}" ..
           cd ..
           rm -rf clang-bin
 
       - name: Compile Kernel
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
+          export CLANG_DIR="$(pwd)/${CLANG_VERSION}"
           chmod +x super_build.sh
-          ./super_build.sh
+          ./super_build.sh 2>&1 | tee kernel-build.log
 
       - name: Compile Touchscreen Driver Module
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          export CLANG_DIR="$(pwd)/clang-r547379"
+          export CLANG_DIR="$(pwd)/${CLANG_VERSION}"
           export PATH="$CLANG_DIR/bin:$PATH"
           export ARCH=arm64
           export SUBARCH=arm64
@@ -71,7 +78,7 @@ jobs:
       - name: Compile KGSL GPU Driver Module (msm_kgsl.ko)
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          export CLANG_DIR="$(pwd)/clang-r547379"
+          export CLANG_DIR="$(pwd)/${CLANG_VERSION}"
           export PATH="$CLANG_DIR/bin:$PATH"
           export ARCH=arm64
           export SUBARCH=arm64
@@ -84,7 +91,7 @@ jobs:
       - name: Compile Adreno Overclock Module (adreno_overclock.ko)
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          export CLANG_DIR="$(pwd)/clang-r547379"
+          export CLANG_DIR="$(pwd)/${CLANG_VERSION}"
           export PATH="$CLANG_DIR/bin:$PATH"
           export ARCH=arm64
           export SUBARCH=arm64
@@ -100,7 +107,7 @@ jobs:
             echo "Patching touchscreen driver..."
             python3 vendor/zte/zte_tpd/patch_tpd.py stock_rom_modules/modules/zte_tpd.ko vendor/zte/zte_tpd/zte_tpd.ko
           else
-            echo "❌ Error: zte_tpd.ko not found after build!"
+            echo "Error: zte_tpd.ko not found after build!"
             exit 1
           fi
 
@@ -108,6 +115,52 @@ jobs:
         run: |
           chmod +x repack_perfect_sign.sh
           ./repack_perfect_sign.sh
+
+      - name: Prepare release package
+        if: success()
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+
+          copy_asset() {
+            local src="$1"
+            local dest="${2:-$(basename "$src")}"
+            if [ -f "$src" ]; then
+              cp "$src" "release-assets/$dest"
+              echo "asset: $dest"
+            else
+              echo "missing optional asset: $src"
+            fi
+          }
+
+          copy_asset dev_reverse_perfect.img
+          copy_asset kernel_platform/common/arch/arm64/boot/Image Image
+          copy_asset vendor/zte/zte_tpd/zte_tpd.ko zte_tpd.ko
+          copy_asset vendor/qcom/opensource/graphics-kernel/msm_kgsl.ko msm_kgsl.ko
+          copy_asset vendor/qcom/opensource/zte-drivers/zte_adreno_overclock/adreno_overclock.ko adreno_overclock.ko
+          copy_asset zte_custom_drivers.zip
+          copy_asset rm11pro_gpu_oc_1250.zip
+          copy_asset kernel_platform/common/System.map System.map
+          copy_asset kernel_platform/common/.config kernel.config
+          copy_asset kernel-build.log
+
+          short_sha="${GITHUB_SHA::12}"
+          git archive --format=tar.gz \
+            --prefix="android_kernel_nubia_sm8850_qwjujube-${short_sha}/" \
+            -o "release-assets/opensource-${short_sha}.tar.gz" \
+            HEAD
+
+          {
+            echo "NX809J kernel build"
+            echo "Run: ${GITHUB_RUN_NUMBER}"
+            echo "Commit: ${GITHUB_SHA}"
+            echo "Branch/ref: ${GITHUB_REF_NAME}"
+            echo "Clang: ${CLANG_VERSION}"
+            echo "Rust: ${RUST_VERSION}"
+            echo "Built at UTC: $(date -u -Is)"
+            echo
+            echo "Assets include boot image, modules, kernel config, System.map, build log, and the tracked opensource tree for this exact commit."
+          } > release-assets/build-info.txt
 
       - name: Upload Boot Image
         uses: actions/upload-artifact@v4
@@ -148,18 +201,22 @@ jobs:
           name: rm11pro_gpu_oc_1250
           path: rm11pro_gpu_oc_1250.zip
 
+      - name: Upload complete release package
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: nx809j-release-package-${{ github.run_number }}
+          path: release-assets/
+          retention-days: 90
 
       - name: Create GitHub Release
+        if: github.event_name != 'pull_request' && success()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="build-run-${{ github.run_number }}-$(date +'%Y%m%d%H%M')"
-          echo "🚀 Creating GitHub Release: $TAG_NAME"
-          # Collect release assets (skip missing files gracefully)
-          ASSETS=""
-          for f in dev_reverse_perfect.img vendor/zte/zte_tpd/zte_tpd.ko vendor/qcom/opensource/graphics-kernel/msm_kgsl.ko zte_custom_drivers.zip rm11pro_gpu_oc_1250.zip kernel_platform/common/System.map kernel_platform/common/.config; do
-            [ -f "$f" ] && ASSETS="$ASSETS $f"
-          done
-          gh release create "$TAG_NAME" $ASSETS \
+          TAG_NAME="build-run-${{ github.run_number }}-$(date -u +'%Y%m%d%H%M')"
+          echo "Creating GitHub Release: $TAG_NAME"
+          gh release create "$TAG_NAME" release-assets/* \
+            --target "$GITHUB_SHA" \
             --title "Build Run #${{ github.run_number }} (NX809J)" \
-            --notes "Automated build compiled on $(date). Contains signed kernel image, patched touchscreen module, compiled msm_kgsl.ko, adreno_overclock module (rm11pro_gpu_oc_1250.zip), System.map, .config, and Magisk/KernelSU flashable modules."
+            --notes-file release-assets/build-info.txt
