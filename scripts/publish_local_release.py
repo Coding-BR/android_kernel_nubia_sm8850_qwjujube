@@ -171,13 +171,46 @@ def collect_assets(
     return sorted({asset.resolve() for asset in assets}, key=lambda path: path.name)
 
 
+def delete_existing_asset(release: dict, token: str, asset_name: str) -> None:
+    assets_url = release.get("assets_url")
+    if not assets_url:
+        return
+    existing_assets = github_json("GET", assets_url, token)
+    for existing in existing_assets:
+        if existing.get("name") == asset_name:
+            github_request("DELETE", existing["url"], token)
+
+
 def upload_asset(upload_url_template: str, token: str, asset: Path) -> None:
     upload_url = upload_url_template.split("{", 1)[0]
     query = urllib.parse.urlencode({"name": asset.name})
     url = f"{upload_url}?{query}"
     content_type = mimetypes.guess_type(asset.name)[0] or "application/octet-stream"
-    data = asset.read_bytes()
-    github_request("POST", url, token, data=data, content_type=content_type)
+    command = [
+        "curl",
+        "--fail",
+        "--show-error",
+        "--silent",
+        "--location",
+        "--retry",
+        "3",
+        "--retry-delay",
+        "5",
+        "--request",
+        "POST",
+        "--header",
+        f"Authorization: Bearer {token}",
+        "--header",
+        "Accept: application/vnd.github+json",
+        "--header",
+        "X-GitHub-Api-Version: 2022-11-28",
+        "--header",
+        f"Content-Type: {content_type}",
+        "--data-binary",
+        f"@{asset}",
+        url,
+    ]
+    subprocess.run(command, check=True)
 
 
 def create_or_get_release(
@@ -267,12 +300,13 @@ def main() -> int:
         build_info.read_text(),
     )
 
-    print(f"[release] {release.get('html_url') or release.get('url')}")
+    print(f"[release] {release.get('html_url') or release.get('url')}", flush=True)
     for asset in assets:
-        print(f"[release] uploading {asset.name} ({asset.stat().st_size} bytes)")
+        print(f"[release] uploading {asset.name} ({asset.stat().st_size} bytes)", flush=True)
+        delete_existing_asset(release, token, asset.name)
         upload_asset(release["upload_url"], token, asset)
 
-    print("[release] done")
+    print("[release] done", flush=True)
     return 0
 
 
