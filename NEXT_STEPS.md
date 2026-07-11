@@ -93,29 +93,34 @@ KBUILD_MODPOST_WARN=1 make -C vendor/qcom/opensource/<TECHPACK> \
 
 ---
 
-## TAREFA 4: Engenharia Reversa dos 12 Módulos ZTE ⬜
+## TAREFA 4: Reconstrução e Validação dos 12 Módulos ZTE EM ANDAMENTO
 
-Módulos proprietários sem source que rodam no device. Código decompilado disponível em `decompiled/`.
+O corpus de engenharia reversa cobre os 12 módulos. Código C reconstruído
+também existe para todos eles, mas presença de source não equivale a uma
+validação atual de compilação, ABI, KCFI, boot ou hardware. O estado de
+proveniência autoritativo está em [SOURCE_PROVENANCE.md](SOURCE_PROVENANCE.md).
 
-| # | Módulo | Decompiled | Prioridade |
-|---|--------|-----------|------------|
-| 1 | `zte_charger_policy.ko` | `decompiled/zte_charger_policy/` | Alta — carregamento |
-| 2 | `zte_power_supply.ko` | `decompiled/zte_power_supply/` | Alta — energia |
-| 3 | `zte_led.ko` | `decompiled/zte_led/` | Média — LEDs |
-| 4 | `zte_fingerprint.ko` | `decompiled/zte_fingerprint/` | Média |
-| 5 | **[CONCLUÍDO]** `zte_misc.ko` | `decompiled/zte_misc/` | Média |
-| 6 | **[CONCLUÍDO]** `zte_ir.ko` | `decompiled/zte_ir/` | Baixa — IR blaster |
-| 7 | `zte_tpd.ko` | `decompiled/zte_tpd/` | Baixa |
-| 8 | **[CONCLUÍDO]** `zte_imem_info.ko` | `decompiled/zte_imem_info/` | Baixa |
-| 9 | **[CONCLUÍDO]** `zte_sensor_sensitivity.ko` | `decompiled/zte_sensor_sensitivity/` | Baixa |
-| 10 | **[CONCLUÍDO]** `zte_stats_info.ko` | `decompiled/zte_stats_info/` | Baixa |
-| 11 | **[CONCLUÍDO]** `zte_reboot_ext.ko` | `decompiled/zte_reboot_ext/` | Baixa |
-| 12 | `zte_ramdisk_reboot.ko` | `decompiled/zte_ramdisk_reboot/` | Baixa |
+| # | Módulo | Evidência Ghidra | Reconstrução C | Estado atual |
+|---|--------|------------------|----------------|--------------|
+| 1 | `zte_charger_policy.ko` | `decompiled/zte_charger_policy/` | `vendor/qcom/opensource/zte-drivers/zte_charger_policy/` | Source presente; gate atual pendente |
+| 2 | `zte_power_supply.ko` | `decompiled/zte_power_supply/` | `vendor/qcom/opensource/zte-drivers/zte_power_supply/` | Source presente; gate atual pendente |
+| 3 | `zte_led.ko` | `decompiled/zte_led/` | `vendor/qcom/opensource/zte-drivers/zte_led/` | Source presente; gate atual pendente |
+| 4 | `zte_fingerprint.ko` | `decompiled/zte_fingerprint/` | `vendor/qcom/opensource/zte-drivers/zte_fingerprint/` | Source presente; gate atual pendente |
+| 5 | `zte_misc.ko` | `decompiled/zte_misc/` | `vendor/qcom/opensource/zte-drivers/zte_misc/` | Source presente; gate atual pendente |
+| 6 | `zte_ir.ko` | `decompiled/zte_ir/` | `vendor/qcom/opensource/zte-drivers/zte_ir/` | Source presente; gate atual pendente |
+| 7 | `zte_tpd.ko` | `decompiled/zte_tpd/` | `kernel_platform/common/drivers/soc/qcom/zte/zte_tpd/` | Build-target Ghidra; gate atual pendente |
+| 8 | `zte_imem_info.ko` | `decompiled/zte_imem_info/` | `vendor/qcom/opensource/zte-drivers/zte_imem_info/` | Source presente; gate atual pendente |
+| 9 | `zte_sensor_sensitivity.ko` | `decompiled/zte_sensor_sensitivity/` | `vendor/qcom/opensource/zte-drivers/zte_sensor_sensitivity/` | Source presente; gate atual pendente |
+| 10 | `zte_stats_info.ko` | `decompiled/zte_stats_info/` | `vendor/qcom/opensource/zte-drivers/zte_stats_info/` | Source presente; gate atual pendente |
+| 11 | `zte_reboot_ext.ko` | `decompiled/zte_reboot_ext/` | `vendor/qcom/opensource/zte-drivers/zte_reboot_ext/` | Source presente; gate atual pendente |
+| 12 | `zte_ramdisk_reboot.ko` | `decompiled/zte_ramdisk_reboot/` | `vendor/qcom/opensource/zte-drivers/zte_ramdisk_reboot/` | Source presente; gate atual pendente |
 
 ### Abordagem:
 - Fase 1: `nm -u` / `readelf -s` nos .ko originais do device para mapear símbolos
 - Fase 2: Descompilação Ghidra função por função
-- Decisão: Reescrever em C limpo ou usar os .ko binários diretamente
+- Fase 3: Compilar cada reconstrução e validar ABI/KCFI
+- Fase 4: Validar boot, suspend/resume e comportamento no hardware
+- Regra: módulos binários oficiais são evidência checksummed, não substitutos de source
 
 ---
 

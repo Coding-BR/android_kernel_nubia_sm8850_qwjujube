@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "device": {
+    "manufacturer": "Nubia",
+    "model": "RedMagic 11 Pro",
+    "product": "NX809J",
+    "platform": "SM8850",
+    "codename": "qwjujube"
+  },
+  "ledger_status": "HYBRID_SOURCE_TREE",
+  "baseline": {
+    "repository": "https://github.com/Coding-BR/android_kernel_nubia_sm8850_qwjujube",
+    "commit": "8e0ce6d3fa4086461710ac12d302a37d92916f0b",
+    "classification": "PUBLISHED_OEM_AND_QUALCOMM_BASELINE_WITH_PROJECT_PATCHES",
+    "provenance_rule": "Directory membership alone does not prove authorship; file headers and Git history remain authoritative."
+  },
+  "source_sets": [
+    {
+      "id": "published-kernel-baseline",
+      "classification": "MIXED_PUBLISHED_SOURCE",
+      "paths": [
+        "kernel_platform",
+        "vendor/qcom/opensource",
+        "vendor/zte"
+      ],
+      "excluded_classifications": [
+        "decompiled",
+        "vendor/qcom/opensource/zte-drivers",
+        "kernel_platform/common/drivers/soc/qcom/zte/zte_tpd",
+        "stock_rom_modules",
+        "evidence"
+      ],
+      "build_status": "NOT_ASSERTED_BY_LEDGER"
+    },
+    {
+      "id": "ghidra-module-corpus",
+      "classification": "GHIDRA_DERIVED_EVIDENCE",
+      "path": "decompiled",
+      "tracked_file_count": 104002,
+      "top_level_module_count": 302,
+      "build_input": false
+    },
+    {
+      "id": "zte-touchscreen-reconstruction",
+      "classification": "GHIDRA_DERIVED_BUILD_TARGET",
+      "path": "kernel_platform/common/drivers/soc/qcom/zte/zte_tpd",
+      "tracked_file_count": 499,
+      "c_file_count": 488,
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING",
+      "original_oem_source_available": false
+    }
+  ],
+  "reconstructed_modules": [
+    {
+      "module": "zte_adreno_overclock",
+      "path": "vendor/qcom/opensource/zte-drivers/zte_adreno_overclock",
+      "classification": "PROJECT_RECONSTRUCTED_C",
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING"
+    },
+    {
+      "module": "zte_charger_policy",
+      "path": "vendor/qcom/opensource/zte-drivers/zte_charger_policy",
+      "classification": "PROJECT_RECONSTRUCTED_C",
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING"
+    },
+    {
+      "module": "zte_fingerprint",
+      "path": "vendor/qcom/opensource/zte-drivers/zte_fingerprint",
+      "classification": "PROJECT_RECONSTRUCTED_C",
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING"
+    },
+    {
+      "module": "zte_imem_info",
+      "path": "vendor/qcom/opensource/zte-drivers/zte_imem_info",
+      "classification": "PROJECT_RECONSTRUCTED_C",
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING"
+    },
+    {
+      "module": "zte_ir",
+      "path": "vendor/qcom/opensource/zte-drivers/zte_ir",
+      "classification": "PROJECT_RECONSTRUCTED_C",
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING"
+    },
+    {
+      "module": "zte_led",
+      "path": "vendor/qcom/opensource/zte-drivers/zte_led",
+      "classification": "PROJECT_RECONSTRUCTED_C",
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING"
+    },
+    {
+      "module": "zte_misc",
+      "path": "vendor/qcom/opensource/zte-drivers/zte_misc",
+      "classification": "PROJECT_RECONSTRUCTED_C",
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING"
+    },
+    {
+      "module": "zte_power_supply",
+      "path": "vendor/qcom/opensource/zte-drivers/zte_power_supply",
+      "classification": "PROJECT_RECONSTRUCTED_C",
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING"
+    },
+    {
+      "module": "zte_ramdisk_reboot",
+      "path": "vendor/qcom/opensource/zte-drivers/zte_ramdisk_reboot",
+      "classification": "PROJECT_RECONSTRUCTED_C",
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING"
+    },
+    {
+      "module": "zte_reboot_ext",
+      "path": "vendor/qcom/opensource/zte-drivers/zte_reboot_ext",
+      "classification": "PROJECT_RECONSTRUCTED_C",
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING"
+    },
+    {
+      "module": "zte_sensor_sensitivity",
+      "path": "vendor/qcom/opensource/zte-drivers/zte_sensor_sensitivity",
+      "classification": "PROJECT_RECONSTRUCTED_C",
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING"
+    },
+    {
+      "module": "zte_stats_info",
+      "path": "vendor/qcom/opensource/zte-drivers/zte_stats_info",
+      "classification": "PROJECT_RECONSTRUCTED_C",
+      "build_status": "CURRENT_BRANCH_BUILD_GATE_PENDING"
+    }
+  ],
+  "binary_evidence": [
+    {
+      "path": "evidence/stock-modules/zte_charger_policy/official_zte_charger_policy.ko",
+      "sha256": "0513da230bbc9b82efacdac8309bbc24f94c9ae40f7faefc617ca7e86bf8316c",
+      "build_input": false
+    },
+    {
+      "path": "stock_rom_modules/modules/zte_tpd.ko",
+      "sha256": "2ed2fe5a6486247ef72b2d7ee03efbaadc532fb684e2f41b06b9818b0d4babbb",
+      "build_input": false
+    }
+  ],
+  "missing_integrated_source_form": [
+    {
+      "component": "qcacld-3.0",
+      "expected_path": "vendor/qcom/opensource/wlan/qcacld-3.0",
+      "status": "ABSENT"
+    },
+    {
+      "component": "qca-wifi-host-cmn",
+      "expected_path": "vendor/qcom/opensource/wlan/qca-wifi-host-cmn",
+      "status": "ABSENT"
+    }
+  ]
+}

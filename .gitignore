@@ -1,10 +1,13 @@
 # Compiladores e dependências externas pesadas
 /clang-r536225/
+/clang-r547379/
 
 # Arquivos gerados por compilação do Kernel
 *.o
+*.o.d
 *.ko
 !/stock_rom_modules/modules/zte_tpd.ko
+!/evidence/stock-modules/**/*.ko
 *.cmd
 *.mod
 *.mod.c

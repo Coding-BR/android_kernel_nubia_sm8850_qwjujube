@@ -241,7 +241,13 @@ This kernel is part of a reverse engineering effort for the RedMagic 11 Pro (NX8
 - GPU overclock to 1200MHz+
 - Removal of ZTE proprietary locks
 
-The original ZTE source code was released under GPL but is **incomplete** — missing ~443 proprietary modules, headers, and the platform configuration fragment (`canoe.fragment`). All missing code was reconstructed via reverse engineering (Ghidra) of original .ko modules extracted from the smartphone.
+The original ZTE source release is **incomplete** and omits many modules,
+headers, integrated WLAN source trees, and the platform configuration fragment
+(`canoe.fragment`). This repository preserves a comprehensive Ghidra-derived
+evidence corpus and build-targeted reconstructions for the 12 tracked ZTE
+modules. Those reconstructions are not original OEM source, and their current
+compile, ABI/KCFI, boot, suspend/resume, and hardware status must be proven by
+separate gates. See `SOURCE_PROVENANCE.md` for the authoritative classification.
 
 ---
 
