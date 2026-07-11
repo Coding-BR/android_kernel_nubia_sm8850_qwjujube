@@ -113,6 +113,8 @@ def collect_assets(
         (artifact_dir / "vmlinux", None),
         (artifact_dir / "kernel.config", None),
         (artifact_dir / "zte_tpd.ko", None),
+        (artifact_dir / "zte_stats_info_custom.ko", None),
+        (artifact_dir / "zte_imem_info.ko", None),
         (artifact_dir / "zte_custom_drivers.zip", None),
         (repo_root / "dev_reverse_perfect.img", None),
         (repo_root / "zte_custom_drivers.zip", None),
@@ -122,6 +124,8 @@ def collect_assets(
         (repo_root / "kernel_platform/common/arch/arm64/boot/Image", "Image"),
         (repo_root / "kernel_platform/common/vmlinux", "vmlinux"),
         (repo_root / "kernel_platform/common/drivers/soc/qcom/zte/zte_tpd/zte_tpd.ko", "zte_tpd.ko"),
+        (repo_root / "vendor/qcom/opensource/zte-drivers/zte_stats_info/zte_stats_info_custom.ko", "zte_stats_info_custom.ko"),
+        (repo_root / "vendor/qcom/opensource/zte-drivers/zte_imem_info/zte_imem_info.ko", "zte_imem_info.ko"),
         (repo_root / "vendor/qcom/opensource/graphics-kernel/msm_kgsl.ko", "msm_kgsl.ko"),
         (
             repo_root / "vendor/qcom/opensource/zte-drivers/zte_adreno_overclock/adreno_overclock.ko",
