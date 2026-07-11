@@ -25,7 +25,7 @@
 #include <linux/pid_namespace.h>
 #include <net/genetlink.h>
 
-#define FAMILY_NAME "ZTE_STATS"
+#define FAMILY_NAME "ZTE_STATS_CUSTOM"
 
 /* Custom ZTE Taskstats Payload Struct (352 bytes) */
 struct zte_taskstats {
@@ -113,11 +113,15 @@ static DEFINE_PER_CPU(struct zte_listener_cpu, zte_listener_array);
 static DEFINE_PER_CPU(u32, zte_taskstats_seqnum);
 
 /* NLA Policy */
-static const struct nla_policy zte_taskstats_policy[ZTE_TASKSTATS_ATTR_MAX + 1] = {
+static const struct nla_policy zte_taskstats_cmd_get_policy[ZTE_TASKSTATS_ATTR_MAX + 1] = {
 	[ZTE_TASKSTATS_ATTR_PID] = { .type = NLA_U32 },
 	[ZTE_TASKSTATS_ATTR_TGID] = { .type = NLA_U32 },
 	[ZTE_TASKSTATS_ATTR_REGISTER_CPUMASK] = { .type = NLA_STRING },
 	[ZTE_TASKSTATS_ATTR_DEREGISTER_CPUMASK] = { .type = NLA_STRING },
+};
+
+static const struct nla_policy zte_cgroupstats_cmd_get_policy[] __used = {
+	[0] = { .type = NLA_U32 },
 };
 
 /* Forward Declarations of Netlink handlers */
@@ -139,7 +143,7 @@ static struct genl_family zte_family = {
 	.name = FAMILY_NAME,
 	.version = 1,
 	.maxattr = ZTE_TASKSTATS_ATTR_MAX,
-	.policy = zte_taskstats_policy,
+	.policy = zte_taskstats_cmd_get_policy,
 	.small_ops = zte_taskstats_ops,
 	.n_small_ops = ARRAY_SIZE(zte_taskstats_ops),
 	.module = THIS_MODULE,
@@ -149,7 +153,7 @@ static struct genl_family zte_family = {
  * Local Task Sighand Lock implementation (avoid GKI non-exported symbols)
  * ====================================================================== */
 
-static struct sighand_struct *zte_lock_task_sighand(struct task_struct *tsk, unsigned long *flags)
+struct sighand_struct *__zte_lock_task_sighand(struct task_struct *tsk, unsigned long *flags)
 {
 	struct sighand_struct *sighand;
 
@@ -168,13 +172,6 @@ static struct sighand_struct *zte_lock_task_sighand(struct task_struct *tsk, uns
 	return sighand;
 }
 
-static void zte_unlock_task_sighand(struct task_struct *tsk, unsigned long *flags)
-{
-	struct sighand_struct *sighand = rcu_dereference(tsk->sighand);
-	if (sighand) {
-		spin_unlock_irqrestore(&sighand->siglock, *flags);
-	}
-}
 
 /* ======================================================================
  * Listener Registry API
@@ -187,10 +184,10 @@ static int zte_parse(struct nlattr *nla, unsigned long *mask)
 	int ret;
 
 	if (!nla)
-		return -EINVAL;
+		return 1;
 
 	len = nla_len(nla);
-	if (len > 0x124)
+	if (len > 0x124 || !len)
 		return -EINVAL;
 
 	buf = kmalloc(len + 1, GFP_KERNEL);
@@ -211,8 +208,8 @@ static int zte_add_del_listener(u32 pid, const unsigned long *mask, int is_del)
 	struct zte_listener_cpu *cpu_sem;
 	struct zte_listener *curr, *tmp;
 
-	/* Validate CPU mask and ensure caller is in root PID namespace */
-	if (!bitmap_subset(mask, cpumask_bits(cpu_possible_mask), nr_cpu_ids))
+	/* Stock driver only handles the first word of possible CPUs on this target. */
+	if ((*mask & ~(*cpumask_bits(cpu_possible_mask))) != 0)
 		return -EINVAL;
 
 	if (task_active_pid_ns(current) != &init_pid_ns)
@@ -233,8 +230,16 @@ static int zte_add_del_listener(u32 pid, const unsigned long *mask, int is_del)
 		}
 	} else {
 		for_each_cpu(cpu, to_cpumask(mask)) {
-			struct zte_listener *new_listener = NULL;
+			struct zte_listener *new_listener;
 			bool exists = false;
+
+			new_listener = kmalloc_node(sizeof(*new_listener), GFP_KERNEL, cpu);
+			if (!new_listener) {
+				zte_add_del_listener(pid, mask, 1);
+				return -ENOMEM;
+			}
+			new_listener->pid = pid;
+			new_listener->valid = 1;
 
 			cpu_sem = per_cpu_ptr(&zte_listener_array, cpu);
 			down_write(&cpu_sem->sem);
@@ -246,15 +251,11 @@ static int zte_add_del_listener(u32 pid, const unsigned long *mask, int is_del)
 				}
 			}
 
-			if (!exists) {
-				new_listener = kmalloc(sizeof(*new_listener), GFP_KERNEL);
-				if (new_listener) {
-					new_listener->pid = pid;
-					new_listener->valid = 1;
-					list_add(&new_listener->list, &cpu_sem->list);
-				}
-			}
+			if (!exists)
+				list_add(&new_listener->list, &cpu_sem->list);
 			up_write(&cpu_sem->sem);
+			if (exists)
+				kfree(new_listener);
 		}
 	}
 
@@ -294,23 +295,27 @@ static int zte_prepare_reply(struct genl_info *info, struct sk_buff **skbp, u16 
 
 static struct zte_taskstats *zte_mk_reply(struct sk_buff *skb, u32 type, u32 pid)
 {
-	struct nlattr *na;
+	struct nlattr *na, *ret;
 
-	na = nla_nest_start(skb, type);
+	na = nla_nest_start_noflag(skb, type);
 	if (!na)
 		return NULL;
 
-	if (nla_put_u32(skb, ZTE_TASKSTATS_TYPE_PID, pid) < 0)
+	if (nla_put_u32(skb, ZTE_TASKSTATS_TYPE_PID, pid) < 0) {
+		nla_nest_cancel(skb, na);
 		goto err;
+	}
 
-	na = nla_reserve_64bit(skb, ZTE_TASKSTATS_TYPE_STATS, sizeof(struct zte_taskstats), 0);
-	if (!na)
+	ret = nla_reserve_64bit(skb, ZTE_TASKSTATS_TYPE_STATS, sizeof(struct zte_taskstats), 0);
+	if (!ret) {
+		nla_nest_cancel(skb, na);
 		goto err;
+	}
 
-	return nla_data(na);
+	nla_nest_end(skb, na);
+	return nla_data(ret);
 
 err:
-	nlmsg_free(skb);
 	return NULL;
 }
 
@@ -357,7 +362,7 @@ static int zte_taskstats_user_cmd(struct sk_buff *skb, struct genl_info *info)
 		rcu_read_lock();
 		task = find_task_by_vpid(pid);
 		if (task) {
-			get_task_struct(task);
+			refcount_inc(&task->usage);
 			rcu_read_unlock();
 
 			active_ns = task_active_pid_ns(current);
@@ -380,6 +385,8 @@ static int zte_taskstats_user_cmd(struct sk_buff *skb, struct genl_info *info)
 			stats->ac_ppid = task_tgid_nr_ns(task, active_ns);
 
 			stats->ac_active = (ktime_get_ns() - task->start_time) / 1000;
+			stats->ac_btime_seconds = ktime_get_real_seconds() - div_u64(stats->ac_active, 1000000);
+			stats->ac_btime_sec = stats->ac_btime_seconds > U32_MAX ? U32_MAX : stats->ac_btime_seconds;
 			stats->ac_utimes = task->utime / 1000;
 			stats->ac_stimes = task->stime / 1000;
 
@@ -392,7 +399,8 @@ static int zte_taskstats_user_cmd(struct sk_buff *skb, struct genl_info *info)
 				mmput(mm);
 			}
 
-			put_task_struct(task);
+			if (refcount_dec_and_test(&task->usage))
+				__put_task_struct(task);
 
 			/* Send response back */
 			genlmsg_end(rep_skb, stats);
@@ -420,8 +428,12 @@ static int zte_taskstats_user_cmd(struct sk_buff *skb, struct genl_info *info)
 		if (task) {
 			unsigned long flags;
 
-			if (zte_lock_task_sighand(task, &flags)) {
-				memset(stats, 0, sizeof(*stats));
+			if (__zte_lock_task_sighand(task, &flags)) {
+				struct sighand_struct *sighand = rcu_dereference(task->sighand);
+				if (task->signal->stats)
+					memcpy(stats, task->signal->stats, sizeof(*stats));
+				else
+					memset(stats, 0, sizeof(*stats));
 				stats->version = 10;
 
 				/* Aggregate stats for all threads in group */
@@ -435,7 +447,8 @@ static int zte_taskstats_user_cmd(struct sk_buff *skb, struct genl_info *info)
 					stats->ac_minflt += t->min_flt;
 					stats->ac_majflt += t->maj_flt;
 				}
-				zte_unlock_task_sighand(task, &flags);
+				if (sighand)
+					spin_unlock_irqrestore(&sighand->siglock, flags);
 				rcu_read_unlock();
 
 				/* Send response back */
@@ -461,12 +474,10 @@ static int zte_cgroupstats_user_cmd(struct sk_buff *skb, struct genl_info *info)
  * Module Initialization and Exit
  * ====================================================================== */
 
-static int __init zte_stats_info_init(void)
+static int __init zte_taskstats_init_early(void)
 {
 	int cpu;
 	int ret;
-
-	pr_info("%s: Initializing ZTE stats module\n", __func__);
 
 	/* Initialize lists and semaphores for all possible CPUs */
 	for_each_possible_cpu(cpu) {
@@ -475,40 +486,20 @@ static int __init zte_stats_info_init(void)
 		INIT_LIST_HEAD(&cpu_sem->list);
 	}
 
+	pr_err("ZTE_DBG: init family=[%s]\n", zte_family.name);
 	ret = genl_register_family(&zte_family);
+	pr_err("ZTE_DBG: genl_register_family ret=%d\n", ret);
 	if (ret) {
 		pr_err("%s: Failed to register ZTE stats family\n", __func__);
 		return ret;
 	}
 
+	pr_err("ZTE_DBG: Family registered OK\n");
+	pr_info("ZTE taskstats registered\n");
 	return 0;
 }
 
-static void __exit zte_stats_info_exit(void)
-{
-	int cpu;
-
-	genl_unregister_family(&zte_family);
-
-	/* Clean up any lingering listeners */
-	for_each_possible_cpu(cpu) {
-		struct zte_listener_cpu *cpu_sem = per_cpu_ptr(&zte_listener_array, cpu);
-		struct zte_listener *curr, *tmp;
-
-		down_write(&cpu_sem->sem);
-		list_for_each_entry_safe(curr, tmp, &cpu_sem->list, list) {
-			list_del(&curr->list);
-			kfree(curr);
-		}
-		up_write(&cpu_sem->sem);
-	}
-
-	pr_info("%s: ZTE stats module exited\n", __func__);
-}
-
-module_init(zte_stats_info_init);
-module_exit(zte_stats_info_exit);
+module_init(zte_taskstats_init_early);
 
 MODULE_DESCRIPTION("ZTE Custom Taskstats Interface Driver");
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("ZTE Corporation (reconstructed)");

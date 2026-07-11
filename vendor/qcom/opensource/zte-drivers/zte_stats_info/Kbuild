@@ -1,1 +1,2 @@
-obj-m += zte_stats_info.o
+obj-m += zte_stats_info_custom.o
+zte_stats_info_custom-objs := zte_stats_info.o

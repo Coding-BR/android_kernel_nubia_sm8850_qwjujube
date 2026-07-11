@@ -3334,14 +3334,7 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	if (err)
 		goto free_copy;
 
-	if (info->name && (strncmp(info->name, "zte_", 4) == 0 ||
-			   strcmp(info->name, "panel_event_notifier") == 0)) {
-		if (strcmp(info->name, "zte_tpd") != 0) {
-			pr_info("Intercepting built-in ZTE/Panel module load: %s (returning success)\n", info->name);
-			err = 0;
-			goto free_copy;
-		}
-	}
+
 
 	err = early_mod_check(info, flags);
 	if (err)
