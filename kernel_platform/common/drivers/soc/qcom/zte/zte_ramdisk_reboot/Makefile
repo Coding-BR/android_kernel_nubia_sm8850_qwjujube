@@ -1,1 +1,1 @@
-obj-y += zte_ramdisk_reboot.o
+obj-m += zte_ramdisk_reboot.o

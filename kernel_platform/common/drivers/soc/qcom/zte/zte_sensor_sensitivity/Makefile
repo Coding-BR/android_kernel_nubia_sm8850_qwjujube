@@ -1,1 +1,1 @@
-obj-y += zte_sensor_sensitivity.o
+obj-m += zte_sensor_sensitivity.o

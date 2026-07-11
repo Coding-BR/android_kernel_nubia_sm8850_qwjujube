@@ -1,1 +1,1 @@
-obj-y += zte_stats_info.o
+obj-m += zte_stats_info.o

@@ -1,1 +1,1 @@
-obj-y += zte_ir.o
+obj-m += zte_ir.o

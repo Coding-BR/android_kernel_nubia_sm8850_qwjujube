@@ -1,1 +1,1 @@
-obj-y += zte_reboot_ext.o
+obj-m += zte_reboot_ext.o

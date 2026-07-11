@@ -1,1 +1,1 @@
-obj-y += zte_led.o
+obj-m += zte_led.o

@@ -1,1 +1,1 @@
-obj-y += zte_fingerprint.o
+obj-m += zte_fingerprint.o

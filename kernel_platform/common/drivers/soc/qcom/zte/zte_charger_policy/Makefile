@@ -1,1 +1,1 @@
-obj-y += zte_charger_policy.o
+obj-m += zte_charger_policy.o
