@@ -26,9 +26,9 @@ Este guia explica como compilar, empacotar e inicializar o kernel customizado co
 Para que a compilação e o empacotamento funcionem corretamente, você deve providenciar os seguintes componentes (que estão configurados no `.gitignore` para manter o repositório limpo):
 
 1. **Toolchain Clang (r536225)**:
-   - Baixe a versão do Clang do AOSP (revision `r536225`).
-   - Extraia a toolchain na raiz deste repositório em uma pasta chamada `clang-r536225/` (de modo que o binário principal fique em `clang-r536225/bin/clang`).
-   - Alternativamente, você pode definir a variável de ambiente `CLANG_DIR` apontando para o seu diretório do Clang antes de compilar.
+   - A revisão AOSP e o hash exatos do compilador estão fixados em `toolchains.lock.json`.
+   - Reversa resolve a cópia padrão em `${XDG_CACHE_HOME:-$HOME/.cache}/reversa/toolchains/android-clang-linux-x86/clang-r536225`.
+   - Defina `CLANG_DIR` somente para usar outro local; o resolvedor ainda valida a identidade e o hash fixados.
 
 2. **Device Tree Blob (`dtb.img`)**:
    - Extraia o arquivo `dtb.img` oficial a partir da partição/imagem de boot (`boot.img`) de estoque da ZTE (versão userdebug correspondente).
@@ -138,7 +138,7 @@ Execute:
 
 ## 📦 2. Arquitetura de Drivers ZTE (obj-y vs obj-m)
 
-No arquivo [drivers/soc/qcom/zte/Makefile](file:///home/adrianojr59/Vídeos/NX809J_Android16_kernel/kernel_platform/common/drivers/soc/qcom/zte/Makefile), os drivers estão configurados assim:
+No arquivo [drivers/soc/qcom/zte/Makefile](kernel_platform/common/drivers/soc/qcom/zte/Makefile), os drivers estão configurados assim:
 
 ```makefile
 obj-y += zte_misc/

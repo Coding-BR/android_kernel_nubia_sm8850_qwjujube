@@ -1,6 +1,9 @@
 import struct
 import sys
-import os
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 def extract_kcfi(filename):
     with open(filename, 'rb') as f:
@@ -84,4 +87,5 @@ def extract_kcfi(filename):
     print("}")
 
 if __name__ == '__main__':
-    extract_kcfi('/home/adrianojr59/Vídeos/NX809J_Android16_kernel/vendor/zte/zte_tpd/official_zte_tpd.ko')
+    module = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'vendor/zte/zte_tpd/official_zte_tpd.ko'
+    extract_kcfi(module)

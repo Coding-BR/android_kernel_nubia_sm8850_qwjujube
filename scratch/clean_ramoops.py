@@ -1,8 +1,13 @@
 import re
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 def clean_ramoops():
-    input_path = '/home/adrianojr59/Vídeos/NX809J_Android16_kernel/scratch/ramoops.log'
-    output_path = '/home/adrianojr59/Vídeos/NX809J_Android16_kernel/scratch/ramoops_clean.txt'
+    input_path = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'scratch/ramoops.log'
+    output_path = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / 'scratch/ramoops_clean.txt'
     
     with open(input_path, 'rb') as f:
         data = f.read()

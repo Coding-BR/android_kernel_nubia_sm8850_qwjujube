@@ -6,6 +6,20 @@ cd "$ROOT"
 
 failures=0
 
+while read -r mode object stage path; do
+  [[ "$mode" == "120000" ]] || continue
+  target="$(git cat-file -p "$object")"
+  if [[ "$target" == /* ]]; then
+    printf '[SOURCE_HYGIENE_FAILED] absolute tracked symlink: %s -> %s\n' "$path" "$target" >&2
+    failures=1
+    continue
+  fi
+  if [[ ! -e "$(dirname "$path")/$target" ]]; then
+    printf '[SOURCE_HYGIENE_FAILED] broken tracked symlink: %s -> %s\n' "$path" "$target" >&2
+    failures=1
+  fi
+done < <(git ls-files -s)
+
 while IFS= read -r path; do
   case "$path" in
     kernel/prebuilts/*/System.map)
@@ -50,9 +64,19 @@ if [[ "$base" != "HEAD" ]]; then
 fi
 
 python3 scripts/ci/check-source-provenance.py
+python3 scripts/toolchains/resolve_android_clang.py --metadata-only
+
+stale_host_paths="$(git grep -n -I -E '(/home/[^/[:space:]]+/|file:///home/)' -- \
+  README.md README_PT.md COMPILATION_GUIDE.md COMPILATION_GUIDE_PT.md \
+  NEXT_STEPS.md REVERSE_ENGINEERING_MASTER_PLAN.md super_build.sh scratch \
+  'vendor/qcom/opensource/*/Makefile' || true)"
+if [[ -n "$stale_host_paths" ]]; then
+  printf '[SOURCE_HYGIENE_FAILED] host-specific absolute paths:\n%s\n' "$stale_host_paths" >&2
+  failures=1
+fi
 
 if (( failures != 0 )); then
   exit 1
 fi
 
-printf '[SOURCE_HYGIENE_OK] artifacts, blob sizes, diff, and provenance verified\n'
+printf '[SOURCE_HYGIENE_OK] artifacts, symlinks, host paths, toolchain lock, blob sizes, diff, and provenance verified\n'

@@ -29,9 +29,9 @@ This guide explains how to compile, pack, and boot the custom kernel with **Kern
 To ensure compilation and packaging work correctly, you must supply the following components (which are configured in `.gitignore` to keep the repository clean):
 
 1. **Clang Toolchain (r536225)**:
-   - Download the AOSP Clang toolchain (revision `r536225`).
-   - Extract it to the root of this repository in a folder named `clang-r536225/` (such that the main binary is located at `clang-r536225/bin/clang`).
-   - Alternatively, you can set the `CLANG_DIR` environment variable pointing to your Clang directory before compiling.
+   - The exact AOSP revision and compiler hash are pinned in `toolchains.lock.json`.
+   - Reversa resolves the default copy from `${XDG_CACHE_HOME:-$HOME/.cache}/reversa/toolchains/android-clang-linux-x86/clang-r536225`.
+   - Set `CLANG_DIR` only when intentionally using another location; the resolver still enforces the pinned compiler identity and hash.
 
 2. **Device Tree Blob (`dtb.img`)**:
    - Extract the official `dtb.img` file from the stock ZTE boot image (`boot.img`) corresponding to your target userdebug ROM.
@@ -143,7 +143,7 @@ Run:
 
 ## 📦 2. ZTE Drivers Architecture (obj-y vs obj-m)
 
-In the [drivers/soc/qcom/zte/Makefile](file:///home/adrianojr59/Vídeos/NX809J_Android16_kernel/kernel_platform/common/drivers/soc/qcom/zte/Makefile), the drivers are configured as follows:
+In the [drivers/soc/qcom/zte/Makefile](kernel_platform/common/drivers/soc/qcom/zte/Makefile), the drivers are configured as follows:
 
 ```makefile
 obj-y += zte_misc/

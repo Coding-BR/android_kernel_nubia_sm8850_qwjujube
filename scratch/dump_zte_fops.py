@@ -1,4 +1,9 @@
 import struct
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 def parse_elf(filename):
     with open(filename, 'rb') as f:
@@ -74,4 +79,5 @@ def parse_elf(filename):
                 print(f"Offset 0x{r_offset:04x} (offset from zte_fops: {r_offset - 0xf38}): sym_idx={sym_idx} name='{sym['name']}' val=0x{sym['value']:x} addend={r_addend}")
 
 if __name__ == '__main__':
-    parse_elf('/home/adrianojr59/Vídeos/NX809J_Android16_kernel/vendor/zte/zte_tpd/official_zte_tpd.ko')
+    module = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'vendor/zte/zte_tpd/official_zte_tpd.ko'
+    parse_elf(module)

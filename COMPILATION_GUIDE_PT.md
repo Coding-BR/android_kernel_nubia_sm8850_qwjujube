@@ -27,8 +27,8 @@ graph TD
 
 Para compilar o kernel, você precisa de um compilador de Clang compatível e das ferramentas de build oficiais do Android.
 
-### Estrutura de Diretórios Esperada:
-* **Clang Compiler:** Deve estar localizado na raiz do repositório, em uma pasta chamada `clang-r536225`.
+### Local Esperado da Toolchain:
+* **Clang Compiler:** Reversa gerencia o compilador fixado fora da árvore de source em `${XDG_CACHE_HOME:-$HOME/.cache}/reversa/toolchains/android-clang-linux-x86/clang-r536225` por padrão. `toolchains.lock.json` registra a revisão de origem e o hash binário exatos.
 * **Downloads Adicionais:** 
   - [Android Clang r536225](https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/refs/heads/main-order/clang-r536225/)
   - O script de empacotamento (`mkbootimg_v4.py` e `avbtool`) já está incluído no repositório.

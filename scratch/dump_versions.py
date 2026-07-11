@@ -1,5 +1,9 @@
 import struct
 import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 def dump_versions(filename):
     with open(filename, 'rb') as f:
@@ -43,4 +47,5 @@ def dump_versions(filename):
     print("}")
 
 if __name__ == '__main__':
-    dump_versions('/home/adrianojr59/Vídeos/NX809J_Android16_kernel/vendor/zte/zte_tpd/official_zte_tpd.ko')
+    module = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'vendor/zte/zte_tpd/official_zte_tpd.ko'
+    dump_versions(module)

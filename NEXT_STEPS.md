@@ -41,7 +41,8 @@ kernel_platform/common/include/linux/pinctrl/qcom-pinctrl.h (modificado)
 ### Comando de Compilação (referência)
 ```bash
 # Execute a partir da raiz do repositório
-PATH="$(pwd)/clang-r536225/bin:$PATH" \
+export CLANG_DIR="$(python3 scripts/toolchains/resolve_android_clang.py)"
+PATH="$CLANG_DIR/bin:$PATH" \
 KBUILD_MODPOST_WARN=1 make -C vendor/qcom/opensource/<TECHPACK> \
   KERNEL_SRC="$(pwd)/kernel_platform/common" \
   ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 \

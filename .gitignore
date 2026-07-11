@@ -1,6 +1,5 @@
 # Compiladores e dependências externas pesadas
-/clang-r536225/
-/clang-r547379/
+/clang-r*/
 
 # Arquivos gerados por compilação do Kernel
 *.o

@@ -1,5 +1,13 @@
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
 def main():
-    log_path = "/home/adrianojr59/Vídeos/NX809J_Android16_kernel/new-console-ramoops-clean.txt"
+    log_path = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "new-console-ramoops-clean.txt"
+    output_path = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / "scratch/t1_lines.txt"
     with open(log_path, 'r', errors='ignore') as f:
         lines = f.readlines()
         
@@ -8,7 +16,7 @@ def main():
         if "T1]" in line:
             t1_lines.append(f"L{i+1}: {line.strip()}")
             
-    with open("/home/adrianojr59/Vídeos/NX809J_Android16_kernel/scratch/t1_lines.txt", "w") as out:
+    with open(output_path, "w") as out:
         out.write("\n".join(t1_lines))
         
     print(f"Extracted {len(t1_lines)} lines to scratch/t1_lines.txt")

@@ -4,16 +4,15 @@ set -e
 
 cd "$(dirname "$(readlink -f "$0")")"
 
-# Tools paths (can be overridden via environment variables)
-CLANG_DIR="${CLANG_DIR:-$(pwd)/clang-r536225}"
-PREBUILTS_DIR="${PREBUILTS_DIR:-/home/adrianojr59/Downloads/KernelNX809J/infinity_build/prebuilts/kernel-build-tools/linux-x86/bin}"
-
-if [ ! -d "$CLANG_DIR" ]; then
-    echo "❌ Error: Clang compiler not found at $CLANG_DIR"
-    echo "Please download the Android Clang compiler (revision r536225) and extract it to the root of this repository,"
-    echo "or set the CLANG_DIR environment variable to its location (e.g. export CLANG_DIR=/path/to/clang-r536225)."
-    exit 1
+# Toolchain binaries live outside the source tree. Reversa owns the default
+# cache; CLANG_DIR remains available for CI and explicit local overrides.
+resolver_args=()
+if [[ -n "${CLANG_DIR:-}" ]]; then
+    resolver_args+=(--clang-dir "$CLANG_DIR")
 fi
+CLANG_DIR="$(python3 scripts/toolchains/resolve_android_clang.py "${resolver_args[@]}")"
+REVERSA_TOOLCHAIN_ROOT="${REVERSA_TOOLCHAIN_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/reversa/toolchains/android-clang-linux-x86}"
+PREBUILTS_DIR="${PREBUILTS_DIR:-$REVERSA_TOOLCHAIN_ROOT/kernel-build-tools/linux-x86/bin}"
 
 if [ -d "$PREBUILTS_DIR" ]; then
     export PATH="$CLANG_DIR/bin:$PREBUILTS_DIR:$PATH"

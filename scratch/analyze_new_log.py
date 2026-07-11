@@ -1,7 +1,12 @@
 import re
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 def main():
-    log_path = "/home/adrianojr59/Vídeos/NX809J_Android16_kernel/new-console-ramoops-clean.txt"
+    log_path = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "new-console-ramoops-clean.txt"
     with open(log_path, 'r', errors='ignore') as f:
         lines = f.readlines()
     

@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       CLANG_VERSION: clang-r536225
+      CLANG_REPOSITORY_COMMIT: 70a12c4fe88940ab2b0e6d763492dffa2f07e15a
       RUST_VERSION: 1.82.0
     permissions:
       contents: write
@@ -39,26 +40,24 @@ jobs:
 
       - name: Download Android Clang Compiler
         run: |
-          echo "Downloading Android Clang ${CLANG_VERSION}..."
-          git clone --filter=blob:none --sparse https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 clang-bin
-          cd clang-bin
-          git sparse-checkout set "${CLANG_VERSION}"
-          git checkout main
-          mv "${CLANG_VERSION}" ..
-          cd ..
-          rm -rf clang-bin
+          echo "Downloading Android Clang ${CLANG_VERSION} at ${CLANG_REPOSITORY_COMMIT}..."
+          git clone --depth=1 --filter=blob:none --no-checkout https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 clang-bin
+          git -C clang-bin sparse-checkout init --cone
+          git -C clang-bin sparse-checkout set "${CLANG_VERSION}"
+          git -C clang-bin fetch --depth=1 origin "${CLANG_REPOSITORY_COMMIT}"
+          git -C clang-bin checkout --detach "${CLANG_REPOSITORY_COMMIT}"
+          echo "CLANG_DIR=${GITHUB_WORKSPACE}/clang-bin/${CLANG_VERSION}" >> "$GITHUB_ENV"
+          python3 scripts/toolchains/resolve_android_clang.py --clang-dir "${GITHUB_WORKSPACE}/clang-bin/${CLANG_VERSION}"
 
       - name: Compile Kernel
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          export CLANG_DIR="$(pwd)/${CLANG_VERSION}"
           chmod +x super_build.sh
           ./super_build.sh 2>&1 | tee kernel-build.log
 
       - name: Compile Touchscreen Driver Module
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          export CLANG_DIR="$(pwd)/${CLANG_VERSION}"
           export PATH="$CLANG_DIR/bin:$PATH"
           export ARCH=arm64
           export SUBARCH=arm64
@@ -72,7 +71,6 @@ jobs:
       - name: Compile KGSL GPU Driver Module (msm_kgsl.ko)
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          export CLANG_DIR="$(pwd)/${CLANG_VERSION}"
           export PATH="$CLANG_DIR/bin:$PATH"
           export ARCH=arm64
           export SUBARCH=arm64
@@ -85,7 +83,6 @@ jobs:
       - name: Compile Adreno Overclock Module (adreno_overclock.ko)
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          export CLANG_DIR="$(pwd)/${CLANG_VERSION}"
           export PATH="$CLANG_DIR/bin:$PATH"
           export ARCH=arm64
           export SUBARCH=arm64

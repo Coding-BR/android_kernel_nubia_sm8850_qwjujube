@@ -156,7 +156,7 @@ Após uma verificação completa e tentativa de compilação da árvore do kerne
 * **Resolução do Toque Físico e Sleep/Suspend (Estabilização):**
   1. **Toque Físico:** Corrigida a corrupção do circular list kobject (`klist_next: invalid/NULL next pointer`) no platform bus do kernel 6.x migrando a alocação estática global `struct platform_device syna_spi_device` para a alocação dinâmica oficial e limpa `platform_device_register_simple` em `syna_hw_interface_init.c`. Isso restabeleceu com 100% de estabilidade a detecção física de eventos de toque no smartphone.
   2. **Memory Dump ao Desligar a Tela:** Identificada falha de pânico e crash de kernel/watchdog bite ao desligar a tela, que abortava o congelador do espaço do usuário. A causa era a chamada do panel notifier para `change_tp_state.c` contendo agendamentos estáticos forçados via `queue_work_on(32, ...)` direcionados à CPU `32` inexistente (fora dos limites do octa-core 0-7). A substituição pela macro oficial unbound `queue_work(...)` sanou o crash definitivamente.
-* **Auditoria de Carga:** Identificado via verificação de assinatura de GNU Build-ID que o carregamento dinâmico por bind-mount no estágio `post-fs-data` é tardio (o kernel já iniciou os drivers oficiais na RAM durante o early-init do bootloader/init). Criado o guia global [DEPLOYMENT_AND_VERIFICATION_GUIDE.md](file:///home/adrianojr59/Vídeos/NX809J_Android16_kernel/DEPLOYMENT_AND_VERIFICATION_GUIDE.md) detalhando o protocolo de teste via fastboot de kernel embutido (built-in `obj-y`) para testar drivers diretamente na RAM sem risco de brick.
+* **Auditoria de Carga:** Identificado via verificação de assinatura de GNU Build-ID que o carregamento dinâmico por bind-mount no estágio `post-fs-data` é tardio (o kernel já iniciou os drivers oficiais na RAM durante o early-init do bootloader/init). Criado o guia global [DEPLOYMENT_AND_VERIFICATION_GUIDE.md](DEPLOYMENT_AND_VERIFICATION_GUIDE.md) detalhando o protocolo de teste via fastboot de kernel embutido (built-in `obj-y`) para testar drivers diretamente na RAM sem risco de brick.
 * **Impacto:** Restaura o suporte total ao touchscreen físico, gestos off-screen, comunicação SPI com o controlador Synaptics TCM e sincronização com o leitor de digitais sob a tela em GKI Kernel, operando com total estabilidade de energia (sleep/suspend/resume) e livre de memory dumps.
 
 ### Resolução de Conflitos de Símbolos Duplicados no Kernel (Fases 1 a 13) - [EM PROGRESSO]
@@ -174,6 +174,5 @@ Após uma verificação completa e tentativa de compilação da árvore do kerne
   - **Fase 12:** Símbolos AltMode (`altmode_*`) para o driver `altmode_glink.ko`.
   - **Fase 13:** Símbolos Synx (`synx_*`) para o driver `synx_driver.ko`.
 * **Impacto:** Permite que os drivers dinâmicos Qualcomm essenciais carreguem com sucesso do ramdisk no boot inicial.
-
 
 

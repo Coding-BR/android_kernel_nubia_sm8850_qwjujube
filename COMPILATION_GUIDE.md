@@ -27,8 +27,8 @@ graph TD
 
 To compile the kernel, you need a compatible Clang compiler toolchain and the official Android platform build tools.
 
-### Expected Directory Structure:
-* **Clang Compiler:** Must be placed at the root of the repository, inside a directory named `clang-r536225`.
+### Expected Toolchain Location:
+* **Clang Compiler:** Reversa manages the pinned compiler outside the source tree at `${XDG_CACHE_HOME:-$HOME/.cache}/reversa/toolchains/android-clang-linux-x86/clang-r536225` by default. `toolchains.lock.json` records the exact source revision and binary hash.
 * **Additional Downloads:** 
   - [Android Clang r536225](https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/refs/heads/main-order/clang-r536225/)
   - The packaging scripts (`mkbootimg_v4.py` and `avbtool`) are already included in this repository.
