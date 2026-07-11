@@ -256,8 +256,8 @@
 			};
 
 			/* LOW_SVS_D2_1 */
-			qcom,gpu-pwrlevel@15 {
-				reg = <15>;
+			qcom,gpu-pwrlevel@18 {
+				reg = <18>;
 				qcom,gpu-freq = <191000000>;
 				qcom,level = <RPMH_REGULATOR_LEVEL_LOW_SVS_D2_1>;
 
@@ -267,8 +267,8 @@
 			};
 
 			/* LOW_SVS_D3 */
-			qcom,gpu-pwrlevel@16 {
-				reg = <16>;
+			qcom,gpu-pwrlevel@19 {
+				reg = <19>;
 				qcom,gpu-freq = <160000000>;
 				qcom,level = <RPMH_REGULATOR_LEVEL_LOW_SVS_D3>;
 
